@@ -128,11 +128,24 @@ node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filen
 
 由于二进制文件可能较大，ShareOne 采用直传 S3 的方式。请直接调用本技能目录下的 `shareone_upload.js` 脚本进行上传：
 
+**如果是首次创建 (POST):**
+
 ```bash
-node scripts/shareone_upload.js <FILE_PATH> --api-key $SHAREONE_API_KEY
+node scripts/shareone_upload.js <FILE_PATH> --api-key $SHAREONE_API_KEY [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
 ```
 
-_(注意：如果需要设置密码或水印，请修改脚本或使用 HTML 方式上传)_
+**如果是更新已有链接的密码或水印 (PUT):**
+
+对于已经上传的二进制文件，如果用户要求修改密码或水印，请调用 `update_file_meta.js` 脚本（假设存在，或通过 curl 直接调用 `/api/v1/files/{share_id}` 接口）：
+
+```bash
+curl -X PUT "https://shareone.sudoprivacy.com/api/v1/files/<YOUR_SHARE_ID>" \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $SHAREONE_API_KEY" \
+     -d '{"password": "NEW_PASSWORD", "watermark": "NEW_WATERMARK"}'
+```
+
+_(注意：传空字符串 `""` 表示取消密码或水印)_
 
 ### 5. 异常处理与结果反馈 (Feedback)
 
