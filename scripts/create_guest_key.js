@@ -3,7 +3,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const req = https.request('https://shareone.sudoprivacy.com/api/v1/agent-guest-key', {
+const req = https.request('https://shareone.app/api/v1/agent-guest-key', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
 }, (res) => {
