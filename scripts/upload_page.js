@@ -45,8 +45,8 @@ if (!shareId) {
 const data = JSON.stringify(payload);
 
 const url = shareId
-    ? `https://shareone.sudoprivacy.com/api/v1/pages/${shareId}`
-    : 'https://shareone.sudoprivacy.com/api/v1/pages';
+    ? `https://shareone.app/api/v1/pages/${shareId}`
+    : 'https://shareone.app/api/v1/pages';
 
 const method = shareId ? 'PUT' : 'POST';
 
