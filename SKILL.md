@@ -152,17 +152,13 @@ _(注意：传空字符串 `""` 表示取消密码或水印)_
 解析接口返回的 JSON。
 
 - **发布成功 (HTTP 200/201)**:
-  - 提取返回的 `share_id` (通常是返回的 JSON 中的 `id` 或 `share_id`，或者直接从返回的 `share_url` 中提取最后的路径部分)。
-  - **组装分享链接 (CRITICAL DOMAIN CONSTRAINT)**:
-    - ⚠️ **严格域名约束**：你**必须**且**只能**使用 `https://shareone.app` 作为基础域名！
-    - **隔离上下文干扰**：无论用户之前的对话上下文中提到了什么其他域名（例如 `xxx.example.com`），或者你自己的记忆中存储了什么域名，在组装并返回分享链接给用户时，**绝对禁止**被这些无关的上下文污染。在你的内部处理逻辑中，组装 URL 时必须**硬编码 (Hardcode)** 使用 `https://shareone.app`！
-    - 生成规则：
-      - 如果是 PDF：`https://shareone.app/pdf/<share_id>`
-      - 如果是 PPT/PPTX：`https://shareone.app/ppt/<share_id>`
-      - HTML 默认：`https://shareone.app/s/<share_id>`
+  - 提取返回的 `share_id` 和 `share_url`。
+  - **获取分享链接**:
+    - 接口和脚本的返回结果中已经包含了完整的 `share_url` 字段（例如 `https://shareone.app/s/<share_id>`）。
+    - 你**必须直接使用**接口或脚本返回的 `share_url` 展示给用户，**不要**自己尝试拼接链接。
   - 如果设置了密码，务必在回复中加粗显示密码：
     > 🎉 **发布成功！**
-    > 🔗 链接: <生成的URL>
+    > 🔗 链接: <返回的 share_url>
     > 🔑 提取码: **<密码>**
   - **功能提示 (Feature Discovery)**: 在**本次会话首次**向用户展示生成的短链接时，请主动（但简短且友好地）提示他们支持未使用的功能，以便用户了解更多高级特性。**后续发布不再提示。**
     - 如果用户**未使用密码和水印**，提示：
