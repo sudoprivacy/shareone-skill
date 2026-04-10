@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.0.2
+version: 1.0.3
 description: 发布本地生成的 HTML 网页、PDF 或 PPTX 到 ShareOne 平台，生成公网分享短链接（Capability URL）。当用户要求“发布”、“分享”、“生成链接”或“上线”某个生成的页面/文档时使用此技能。
 ---
 
@@ -126,7 +126,7 @@ node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filen
 
 #### 场景 B：二进制文件 (PDF, PPTX 等)
 
-由于二进制文件可能较大，ShareOne 采用直传 S3 的方式。请直接调用本技能目录下的 `shareone_upload.js` 脚本进行上传：
+由于二进制文件可能较大，ShareOne 采用直传云存储（支持 S3 或 Azure）的方式。请直接调用本技能目录下的 `shareone_upload.js` 脚本进行上传（脚本会自动根据服务端返回的 `upload_type` 字段判断是走 S3 表单上传还是 Azure 的 PUT 直传）：
 
 **如果是首次创建 (POST):**
 
@@ -152,7 +152,6 @@ _(注意：传空字符串 `""` 表示取消密码或水印)_
 解析接口返回的 JSON。
 
 - **发布成功 (HTTP 200/201)**:
-  - 提取返回的 `share_id` 和 `share_url`。
   - **获取分享链接**:
     - 接口和脚本的返回结果中已经包含了完整的 `share_url` 字段（例如 `https://shareone.app/s/<share_id>`）。
     - 你**必须直接使用**接口或脚本返回的 `share_url` 展示给用户，**不要**自己尝试拼接链接。

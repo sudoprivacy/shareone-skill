@@ -79,34 +79,48 @@ async function uploadFile(filePath, apiKey, baseUrl = "https://shareone.app") {
         const shareId = cred.share_id;
         const uploadUrl = cred.upload_url;
         const uploadFields = cred.upload_fields;
-
-        // Step 2: Upload to S3 directly
-        const boundary = '----WebKitFormBoundary' + crypto.randomBytes(16).toString('hex');
-        const bodyParts = [];
-
-        for (const [key, value] of Object.entries(uploadFields)) {
-            bodyParts.push(Buffer.from(`--${boundary}\r\n`));
-            bodyParts.push(Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n`));
-            bodyParts.push(Buffer.from(`${value}\r\n`));
-        }
+        const uploadType = cred.upload_type || 's3';
 
         const fileData = fs.readFileSync(filePath);
-        bodyParts.push(Buffer.from(`--${boundary}\r\n`));
-        bodyParts.push(Buffer.from(`Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`));
-        bodyParts.push(Buffer.from(`Content-Type: ${contentType}\r\n\r\n`));
-        bodyParts.push(fileData);
-        bodyParts.push(Buffer.from('\r\n'));
-        bodyParts.push(Buffer.from(`--${boundary}--\r\n`));
 
-        const bodyBuffer = Buffer.concat(bodyParts);
+        if (uploadType === 'azure') {
+            // Step 2: Upload to Azure directly
+            await request(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'x-ms-blob-type': 'BlockBlob',
+                    'Content-Type': contentType,
+                    'Content-Length': fileData.length
+                }
+            }, fileData);
+        } else {
+            // Step 2: Upload to S3 directly
+            const boundary = '----WebKitFormBoundary' + crypto.randomBytes(16).toString('hex');
+            const bodyParts = [];
 
-        await request(uploadUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': bodyBuffer.length
+            for (const [key, value] of Object.entries(uploadFields)) {
+                bodyParts.push(Buffer.from(`--${boundary}\r\n`));
+                bodyParts.push(Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n`));
+                bodyParts.push(Buffer.from(`${value}\r\n`));
             }
-        }, bodyBuffer);
+
+            bodyParts.push(Buffer.from(`--${boundary}\r\n`));
+            bodyParts.push(Buffer.from(`Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`));
+            bodyParts.push(Buffer.from(`Content-Type: ${contentType}\r\n\r\n`));
+            bodyParts.push(fileData);
+            bodyParts.push(Buffer.from('\r\n'));
+            bodyParts.push(Buffer.from(`--${boundary}--\r\n`));
+
+            const bodyBuffer = Buffer.concat(bodyParts);
+
+            await request(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                    'Content-Length': bodyBuffer.length
+                }
+            }, bodyBuffer);
+        }
 
         // Step 3: Confirm upload
         const confirmUrl = `${baseUrl}/api/v1/files/confirm`;
