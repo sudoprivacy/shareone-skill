@@ -146,7 +146,30 @@ curl -X PUT "https://shareone.app/api/v1/files/<YOUR_SHARE_ID>" \
 
 _(注意：传空字符串 `""` 表示取消密码或水印)_
 
-### 5. 异常处理与结果反馈 (Feedback)
+## 5. 协同与评论修改 (Collaboration & Comments)
+
+ShareOne 支持页面内容的协同评论，允许用户直接在 HTML 页面选中文本并提出修改意见。AI Agent 可以根据这些意见直接修改原内容并更新页面。
+
+**当用户要求处理评论时，请执行以下步骤**：
+
+1. **获取评论**：调用获取评论的 API 接口拉取当前页面的所有评论。
+   ```bash
+   curl -X GET "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments" \
+        -H "X-API-Key: $SHAREONE_API_KEY"
+   ```
+2. **分析评论与代码**：分析返回的评论 JSON 中的 `content`（用户的修改意见）和 `selected_text`（对应的选中原文），并在你维护的源文件或最近生成的代码中定位需要修改的位置。
+3. **执行修改**：根据用户的评论意见对 HTML 或其他文件进行相应的修改。
+4. **更新线上内容**：将修改后的文件使用 PUT 接口更新到 ShareOne（参考场景 A：更新已有链接）。
+5. **更新评论状态**：修改完成后，调用更新评论状态的接口将对应评论状态改为 `resolved`（已解决）。
+   ```bash
+   curl -X PUT "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments/<COMMENT_ID>" \
+        -H "Content-Type: application/json" \
+        -H "X-API-Key: $SHAREONE_API_KEY" \
+        -d '{"status": "resolved"}'
+   ```
+   注：如果因为大范围重构导致某些未解决的评论失去了原文锚点，页面在展示时会自动标识其为“失去锚点”(detached) 状态，你可以根据需要选择忽略它们或让用户确认。
+
+### 6. 异常处理与结果反馈 (Feedback)
 
 解析接口返回的 JSON。
 
