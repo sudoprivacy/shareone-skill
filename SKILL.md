@@ -104,6 +104,7 @@ ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页
    - **绝对不要使用全局正则表达式或简单的全文 `replace()`，这会误伤其他同名文案！**
    - **必须基于 DOM 结构进行精确定位：** 利用 `highlighter_data` 中的 `startMeta.parentTagName`（父标签名）、`startMeta.parentIndex`（该类型标签的索引）以及 `startMeta.textOffset`（文本偏移量），结合 `quote`（被选中的原文），有针对性地定位需要修改的确切区域。
    - **理解结构性修改意图：** 用户的评论可能不仅是简单的文本替换。例如“把这部分移到底部”、“去掉这个功能”、“在这里加上一个图标”。你需要先通过 `highlighter_data` 找到用户划词所在的 DOM 节点（或者它的父容器/卡片），然后再执行结构性的修改操作。
+   - **丢失锚点处理：** 如果你根据上述的 `highlighter_data` 或者 `quote` 无法在当前的源文件中找到对应的文本或 DOM 结构，这通常意味着该文件在用户评论后又发生了其他的修改。此时，**不要瞎猜或强行修改，请务必直接告知用户**（例如：“抱歉，您这条关于 XXX 的评论我无法处理，因为源文件结构似乎已变更，我找不到该部分内容了。”）。
 4. **重新发布**：使用之前的 PUT 方法将修改后的页面更新到 ShareOne。
 5. **标记解决**：对于每一个已处理的评论，调用 `PUT https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments/<COMMENT_ID>/resolve`，Headers 传入 `X-API-Key: $SHAREONE_API_KEY`，Body 传入 `{"resolved": true}`。
 
