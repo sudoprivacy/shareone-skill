@@ -93,7 +93,21 @@ node scripts/check_api_key.js
 - 如果有 `share_id`，接下来执行**更新 (PUT)**。
 - 如果没有，执行**首次创建 (POST)**。
 
-### 4. 构造请求并执行发布 (Execute Request)
+## 4. 获取与处理页面评论 (Comments) - 新增能力
+
+ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页面的评论进行修改**（例如：“帮我处理一下这个页面的评论”），你需要执行以下工作流：
+
+1. **拉取评论**：调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments` 获取所有评论（JSON格式）。筛选出 `resolved: false` 的评论。
+2. **下载源文件**：调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/download`，并在 Headers 中传入 `X-API-Key: $SHAREONE_API_KEY`。此接口会返回包含 `content` 的 JSON。
+3. **精准应用修改 (Critical Step)**：
+   - 仔细阅读每条评论的 `content`（用户的修改意图）和 `highlighter_data`（划词的精确坐标）。
+   - **绝对不要使用全局正则表达式或简单的全文 `replace()`，这会误伤其他同名文案！**
+   - **必须基于 DOM 结构进行精确定位：** 利用 `highlighter_data` 中的 `startMeta.parentTagName`（父标签名）、`startMeta.parentIndex`（该类型标签的索引）以及 `startMeta.textOffset`（文本偏移量），结合 `quote`（被选中的原文），有针对性地定位需要修改的确切区域。
+   - **理解结构性修改意图：** 用户的评论可能不仅是简单的文本替换。例如“把这部分移到底部”、“去掉这个功能”、“在这里加上一个图标”。你需要先通过 `highlighter_data` 找到用户划词所在的 DOM 节点（或者它的父容器/卡片），然后再执行结构性的修改操作。
+4. **重新发布**：使用之前的 PUT 方法将修改后的页面更新到 ShareOne。
+5. **标记解决**：对于每一个已处理的评论，调用 `PUT https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments/<COMMENT_ID>/resolve`，Headers 传入 `X-API-Key: $SHAREONE_API_KEY`，Body 传入 `{"resolved": true}`。
+
+### 5. 构造请求并执行发布 (Execute Request)
 
 根据文件类型和操作类型构造请求。提取用户可能要求的密码 (`password`) 和水印 (`watermark`)。为了最大兼容性，推荐使用 Node.js 脚本发起 HTTP 请求。
 
