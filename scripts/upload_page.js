@@ -9,6 +9,7 @@ let filename = "shared_content.html";
 let password = null;
 let watermark = null;
 let shareId = null;
+let allowComments = null;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
@@ -21,13 +22,15 @@ for (let i = 0; i < args.length; i++) {
         watermark = args[++i];
     } else if (args[i] === '--share-id') {
         shareId = args[++i];
+    } else if (args[i] === '--allow-comments') {
+        allowComments = args[++i] === 'true';
     } else if (!args[i].startsWith('--')) {
         filePath = args[i];
     }
 }
 
 if (!filePath) {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>]");
+    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--allow-comments <true|false>]");
     process.exit(1);
 }
 
@@ -37,6 +40,10 @@ const payload = {
     filename: filename,
     html_content: content
 };
+
+if (allowComments !== null) {
+    payload.allow_comments = allowComments;
+}
 
 if (!shareId) {
     if (password) payload.password = password;
