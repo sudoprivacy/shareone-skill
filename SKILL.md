@@ -99,7 +99,8 @@ node scripts/check_api_key.js
 ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页面的评论进行修改**（例如：“帮我处理一下这个页面的评论”），你需要执行以下工作流：
 
 1. **拉取评论**：默认情况下，调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments?status=unresolved` 获取所有**未解决**的评论（JSON格式）。除非用户明确要求查看所有评论（传 `status=all`）或已解决的评论（传 `status=resolved`）。
-2. **下载源文件**：调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/download`，并在 Headers 中传入 `X-API-Key: $SHAREONE_API_KEY`。此接口会返回包含 `content` 的 JSON。
+   - **⚠️ 重要提示：** 如果用户仅仅是说“帮我拉取一下评论看看”或者“查看评论”，**请你在拉取并展示完评论内容后，立即停止操作，等待用户的下一步指令。绝对不要自作主张地直接开始修改源文件！**
+2. **下载源文件**：只有当用户明确要求“处理这些评论”、“根据评论修改页面”时，调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/download`，并在 Headers 中传入 `X-API-Key: $SHAREONE_API_KEY`。此接口会返回包含 `content` 的 JSON。
 3. **精准应用修改 (Critical Step)**：
    - 仔细阅读每条评论的 `content`（用户的修改意图）和 `highlighter_data`（划词的精确坐标）。
    - **绝对不要使用全局正则表达式或简单的全文 `replace()`，这会误伤其他同名文案！**
