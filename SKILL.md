@@ -138,8 +138,9 @@ node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filen
 执行本技能目录下的 `upload_page.js` 脚本，并传入 `--share-id` 参数：
 
 ```bash
-node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID>
+node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--allow-comments true/false]
 ```
+> **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
 
 #### 场景 B：二进制文件 (PDF, PPTX 等)
 

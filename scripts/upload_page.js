@@ -41,13 +41,13 @@ const payload = {
     html_content: content
 };
 
-if (allowComments !== null) {
-    payload.allow_comments = allowComments;
-}
-
 if (!shareId) {
     if (password) payload.password = password;
     if (watermark) payload.watermark = watermark;
+}
+
+if (allowComments !== null) {
+    payload.allow_comments = allowComments;
 }
 
 const data = JSON.stringify(payload);
