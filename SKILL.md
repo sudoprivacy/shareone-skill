@@ -133,7 +133,7 @@ ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页
 执行本技能目录下的 `upload_page.js` 脚本：
 
 ```bash
-node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
 ```
 
 > **注意**：只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等字眼时，才加上 `--allow-comments true` 参数。默认是不开启评论的。
@@ -143,7 +143,7 @@ node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filen
 执行本技能目录下的 `upload_page.js` 脚本，并传入 `--share-id` 参数：
 
 ```bash
-node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--allow-comments true/false]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--allow-comments true/false]
 ```
 
 > **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
@@ -155,7 +155,7 @@ node scripts/upload_page.js <YOUR_FILE_PATH> --api-key $SHAREONE_API_KEY --filen
 **如果是首次创建 (POST):**
 
 ```bash
-node scripts/shareone_upload.js <FILE_PATH> --api-key $SHAREONE_API_KEY [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
+node scripts/shareone_upload.js "<FILE_PATH>" --api-key $SHAREONE_API_KEY [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
 ```
 
 **如果是更新已有链接的密码或水印 (PUT):**
