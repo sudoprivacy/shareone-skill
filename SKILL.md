@@ -1,7 +1,7 @@
 ---
 name: shareone
-version: 1.0.5
-description: 发布本地生成的 HTML 网页、PDF 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
+version: 1.0.6
+description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
 # AI Agent 技能：发布到 ShareOne (shareone)
@@ -43,7 +43,7 @@ description: 发布本地生成的 HTML 网页、PDF 或 PPTX 到 ShareOne 平�
 
 - **如果用户要求分享对话/大段文本/代码**：请首先从你的对话历史中提取上一轮生成的完整文本或代码块。将其保存到当前目录下的一个临时文件中，例如 `share_note.md` 或 `share_note.html`。
   - **建议**：如果是 Markdown 格式内容，建议在保存为 `.html` 前，使用简单的 HTML 模板包裹它，或者在 ShareOne 后端支持 Markdown 渲染的情况下直接发送 Markdown。如果无法确定，优先生成美观的 `.html` 文件。
-- **如果用户指定了文件**：使用用户指定的文件。如果用户没有指定，请根据上下文寻找你最近一次生成或编辑的文件（如 `.html`, `.pdf`, `.pptx`）。
+- **如果用户指定了文件**：使用用户指定的文件。如果用户没有指定，请根据上下文寻找你最近一次生成或编辑的文件（如 `.html`, `.pdf`, `.pptx`, `.docx`）。
 
 - **校验文件是否存在**：如果你通过上述步骤生成或锁定了文件，但文件仍不存在，停止并告知用户。
 - **获取或创建 API Key**：执行本技能目录下的 `check_api_key.js` 脚本，它会依次检查环境变量、本地配置文件。如果都没有找到，脚本会输出 `KEY_NOT_FOUND`。
@@ -121,7 +121,7 @@ ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页
 #### 场景 A：文本、代码或纯 HTML 文件 (`.html`, `.md`, `.txt`)
 
 > **⚠️ 警告 (CRITICAL):**
-> 绝对不要通过这个接口上传任何二进制文件（如 `.ppt`, `.pptx`, `.pdf`, `.zip`, `.png` 等），否则服务器会返回 `400 Bad Request` 错误（提示检测到二进制内容）。如果你看到此类错误，请立即更换为 **场景 B** 的 `/api/v1/files` 接口重新上传。
+> 绝对不要通过这个接口上传任何二进制文件（如 `.ppt`, `.pptx`, `.doc`, `.docx`, `.pdf`, `.zip`, `.png` 等），否则服务器会返回 `400 Bad Request` 错误（提示检测到二进制内容）。如果你看到此类错误，请立即更换为 **场景 B** 的 `/api/v1/files` 接口重新上传。
 
 接口：`https://shareone.app/api/v1/pages`
 格式：`application/json`
@@ -148,7 +148,7 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --fil
 
 > **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
 
-#### 场景 B：二进制文件 (PDF, PPTX 等)
+#### 场景 B：二进制文件 (PDF, PPTX, Word 等)
 
 由于二进制文件可能较大，ShareOne 采用直传云存储（支持 S3 或 Azure）的方式。请直接调用本技能目录下的 `shareone_upload.js` 脚本进行上传（脚本会自动根据服务端返回的 `upload_type` 字段判断是走 S3 表单上传还是 Azure 的 PUT 直传）：
 
