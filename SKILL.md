@@ -106,13 +106,15 @@ ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页
    - **⚠️ 重要提示：** 如果用户仅仅是说“帮我拉取一下评论看看”或者“查看评论”，**请你在拉取并展示完评论内容后，立即停止操作，等待用户的下一步指令。绝对不要自作主张地直接开始修改源文件！**
 2. **下载源文件**：只有当用户明确要求“处理这些评论”、“根据评论修改页面”时，调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/download`，并在 Headers 中传入 `X-API-Key: $SHAREONE_API_KEY`。此接口会返回包含 `content` 的 JSON。
 3. **精准应用修改 (Critical Step)**：
+   - **⚠️ 评论与回复的整体理解：** 评论数据中可能包含 `replies`（回复）。你**必须**将父评论及其所有回复作为一个**“讨论上下文 (Thread)”**来整体阅读。不要把每条回复当成独立的修改指令，而是要综合理解整个讨论的最终共识，并**必须经过用户确认后再真正进行修改**。
+   - **⚠️ 锚点继承：** 所有回复（`replies`）都继承其父评论的锚点位置（`highlighter_data` 和 `quote`）。
    - 仔细阅读每条评论的 `content`（用户的修改意图）和 `highlighter_data`（划词的精确坐标）。
    - **绝对不要使用全局正则表达式或简单的全文 `replace()`，这会误伤其他同名文案！**
    - **必须基于 DOM 结构进行精确定位：** 利用 `highlighter_data` 中的 `startMeta.parentTagName`（父标签名）、`startMeta.parentIndex`（该类型标签的索引）以及 `startMeta.textOffset`（文本偏移量），结合 `quote`（被选中的原文），有针对性地定位需要修改的确切区域。
    - **理解结构性修改意图：** 用户的评论可能不仅是简单的文本替换。例如“把这部分移到底部”、“去掉这个功能”、“在这里加上一个图标”。你需要先通过 `highlighter_data` 找到用户划词所在的 DOM 节点（或者它的父容器/卡片），然后再执行结构性的修改操作。
    - **丢失锚点处理：** 如果你根据上述的 `highlighter_data` 或者 `quote` 无法在当前的源文件中找到对应的文本或 DOM 结构，这通常意味着该文件在用户评论后又发生了其他的修改。此时，**不要瞎猜或强行修改，请务必直接告知用户**（例如：“抱歉，您这条关于 XXX 的评论我无法处理，因为源文件结构似乎已变更，我找不到该部分内容了。”）。
 4. **重新发布**：使用之前的 PUT 方法将修改后的页面更新到 ShareOne。
-5. **标记解决**：对于每一个已处理的评论，调用 `PUT https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments/<COMMENT_ID>/resolve`，Headers 传入 `X-API-Key: $SHAREONE_API_KEY`，Body 传入 `{"resolved": true}`。
+5. **标记解决**：对于每一个已处理的评论，调用 `PUT https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments/<COMMENT_ID>/resolve`，Headers 传入 `X-API-Key: $SHAREONE_API_KEY`，Body 传入 `{"resolved": true}`。**注意：你只需要对父评论的状态进行修改，不需要单独修改回复的状态。**
 
 ### 5. 构造请求并执行发布 (Execute Request)
 
@@ -182,10 +184,10 @@ ShareOne 支持页面内容的协同评论，允许用户直接在 HTML 页面�
    curl -X GET "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments" \
         -H "X-API-Key: $SHAREONE_API_KEY"
    ```
-2. **分析评论与代码**：分析返回的评论 JSON 中的 `content`（用户的修改意见）和 `selected_text`（对应的选中原文），并在你维护的源文件或最近生成的代码中定位需要修改的位置。
+2. **分析评论与代码**：分析返回的评论 JSON 中的 `content`（用户的修改意见）和 `selected_text`（对应的选中原文），并在你维护的源文件或最近生成的代码中定位需要修改的位置。**注意：如果评论包含 `replies`，请将父评论和所有回复作为整体上下文阅读，综合得出最终修改方案，并必须经过用户确认后再进行修改。**
 3. **执行修改**：根据用户的评论意见对 HTML 或其他文件进行相应的修改。
 4. **更新线上内容**：将修改后的文件使用 PUT 接口更新到 ShareOne（参考场景 A：更新已有链接）。
-5. **更新评论状态**：修改完成后，调用更新评论状态的接口将对应评论状态改为 `resolved`（已解决）。
+5. **更新评论状态**：修改完成后，调用更新评论状态的接口将对应父评论状态改为 `resolved`（已解决）。**注意：只需要对父评论进行状态修改。**
    ```bash
    curl -X PUT "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments/<COMMENT_ID>" \
         -H "Content-Type: application/json" \
