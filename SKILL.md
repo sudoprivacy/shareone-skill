@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.0.6
+version: 1.1.0
 description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
@@ -98,23 +98,113 @@ node scripts/check_api_key.js
 - 如果有 `share_id`，接下来执行**更新 (PUT)**。
 - 如果没有，执行**首次创建 (POST)**。
 
-## 4. 获取与处理页面评论 (Comments) - 新增能力
+## 4. 获取与处理页面评论 (Comments) - 闭环工作流
 
-ShareOne 页面支持访客划词评论。如果用户要求你**根据分享页面的评论进行修改**（例如：“帮我处理一下这个页面的评论”），你需要执行以下工作流：
+ShareOne 页面支持访客划词评论，并提供了完整的**状态机**让 AI Agent 对每条评论给出明确的「认领 → 处理 → 回复 → 关闭」反馈。每条评论拥有 `status` 字段：`open` / `in_progress` / `resolved` / `dismissed`，以及 `author_role`：`visitor` / `owner` / `agent`。
 
-1. **拉取评论**：默认情况下，调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments?status=unresolved` 获取所有**未解决**的评论（JSON格式）。除非用户明确要求查看所有评论（传 `status=all`）或已解决的评论（传 `status=resolved`）。
-   - **⚠️ 重要提示：** 如果用户仅仅是说“帮我拉取一下评论看看”或者“查看评论”，**请你在拉取并展示完评论内容后，立即停止操作，等待用户的下一步指令。绝对不要自作主张地直接开始修改源文件！**
-2. **下载源文件**：只有当用户明确要求“处理这些评论”、“根据评论修改页面”时，调用 `GET https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/download`，并在 Headers 中传入 `X-API-Key: $SHAREONE_API_KEY`。此接口会返回包含 `content` 的 JSON。
-3. **精准应用修改 (Critical Step)**：
-   - **⚠️ 评论与回复的整体理解：** 评论数据中可能包含 `replies`（回复）。你**必须**将父评论及其所有回复作为一个**“讨论上下文 (Thread)”**来整体阅读。不要把每条回复当成独立的修改指令，而是要综合理解整个讨论的最终共识，并**必须经过用户确认后再真正进行修改**。
-   - **⚠️ 锚点继承：** 所有回复（`replies`）都继承其父评论的锚点位置（`highlighter_data` 和 `quote`）。
-   - 仔细阅读每条评论的 `content`（用户的修改意图）和 `highlighter_data`（划词的精确坐标）。
-   - **绝对不要使用全局正则表达式或简单的全文 `replace()`，这会误伤其他同名文案！**
-   - **必须基于 DOM 结构进行精确定位：** 利用 `highlighter_data` 中的 `startMeta.parentTagName`（父标签名）、`startMeta.parentIndex`（该类型标签的索引）以及 `startMeta.textOffset`（文本偏移量），结合 `quote`（被选中的原文），有针对性地定位需要修改的确切区域。
-   - **理解结构性修改意图：** 用户的评论可能不仅是简单的文本替换。例如“把这部分移到底部”、“去掉这个功能”、“在这里加上一个图标”。你需要先通过 `highlighter_data` 找到用户划词所在的 DOM 节点（或者它的父容器/卡片），然后再执行结构性的修改操作。
-   - **丢失锚点处理：** 如果你根据上述的 `highlighter_data` 或者 `quote` 无法在当前的源文件中找到对应的文本或 DOM 结构，这通常意味着该文件在用户评论后又发生了其他的修改。此时，**不要瞎猜或强行修改，请务必直接告知用户**（例如：“抱歉，您这条关于 XXX 的评论我无法处理，因为源文件结构似乎已变更，我找不到该部分内容了。”）。
-4. **重新发布**：使用之前的 PUT 方法将修改后的页面更新到 ShareOne。
-5. **标记解决**：对于每一个已处理的评论，调用 `PUT https://shareone.app/api/v1/shares/<YOUR_SHARE_ID>/comments/<COMMENT_ID>/resolve`，Headers 传入 `X-API-Key: $SHAREONE_API_KEY`，Body 传入 `{"resolved": true}`。**注意：你只需要对父评论的状态进行修改，不需要单独修改回复的状态。**
+### 4.1 查看评论（仅查看，不动手）
+
+如果用户只是说"帮我看看这个页面的评论"，调用：
+
+```
+GET https://shareone.app/api/v1/shares/<SHARE_ID>/comments?status=unresolved
+```
+- `status` 可选值：`all` / `open` / `in_progress` / `resolved` / `dismissed` / `unresolved`（= open + in_progress）。
+- **⚠️ 重要：** 只展示评论内容，**绝对不要自作主张地开始改源文件**，等用户给下一步指令。
+- **⚠️ 评论与回复的整体理解：** 评论数据中可能包含 `replies`（回复）。你**必须**将父评论及其所有回复作为一个**"讨论上下文 (Thread)"**来整体阅读、综合理解最终共识。不要把每条回复当成独立的修改指令。所有回复继承父评论的锚点（`highlighter_data` 和 `quote`）。
+
+如果只想看「现在还有没有未处理的事」，用极轻量的摘要：
+```
+GET https://shareone.app/api/v1/shares/<SHARE_ID>/comments/summary
+# -> { total, open, in_progress, resolved, dismissed, last_activity_at }
+```
+返回 `open == 0` 时无需拉全量。
+
+### 4.2 标准闭环：处理评论（用户明确要求时）
+
+当用户说"帮我处理这些评论"、"根据评论改一下页面"时，**严格按照下面的顺序执行每一条要处理的父评论**（回复不需要单独走流程，只对父评论操作状态）：
+
+#### 步骤 1：认领 — 必须在动手之前做
+
+```bash
+curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $SHAREONE_API_KEY" \
+     -d '{"status": "in_progress"}'
+```
+访问者立刻在页面侧栏看到「处理中」徽标和顶部的「🤖 AI 正在处理 N 条评论…」横幅。**跳过这一步 = 用户感受不到 AI 在干活。**
+
+#### 步骤 2：取源
+
+```
+GET https://shareone.app/api/v1/shares/<SHARE_ID>/download
+Headers: X-API-Key: $SHAREONE_API_KEY
+```
+返回 `{ content, filename, content_type }`。
+
+#### 步骤 3：精准应用修改
+
+- 综合理解**整个 thread（父评论 + 所有 replies）**的最终意图，必要时先和用户确认。
+- **绝对不要用全局 `replace()` / 正则**——会误伤其他同名文案。
+- **基于 DOM 结构精确定位：** 利用 `highlighter_data.startMeta.parentTagName`、`parentIndex`、`textOffset`，结合 `quote`（被选中原文），定位准确节点。
+- **理解结构性意图：** 评论可能是"把这部分挪到底部 / 删掉这个区块 / 加个图标"，先定位再做结构变更。
+- **丢失锚点**：若在当前源文件里无论如何都找不到对应位置，**不要瞎改**，直接走步骤 5 用 `dismissed` + note 告诉用户：「源文件结构已变更，无法定位你这条关于 XXX 的评论」。
+
+#### 步骤 4：重新发布
+
+使用场景 A 的 PUT 流程将改后的文件更新到 ShareOne（保留同一 `share_id`）。
+
+#### 步骤 5：写回复 + 关闭评论 — 必须两步都做
+
+(a) 在该父评论下发一条 **AI 回复**（明确告诉访问者改了什么）：
+```bash
+curl -X POST "https://shareone.app/api/v1/shares/<SHARE_ID>/comments" \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $SHAREONE_API_KEY" \
+     -d '{
+       "parent_id": "<COMMENT_ID>",
+       "quote": "<父评论的 quote>",
+       "highlighter_data": "<父评论的 highlighter_data>",
+       "content": "已按你的建议把标题改成 …，并调整了 …",
+       "author_role": "agent"
+     }'
+```
+> `author_role: "agent"` 只在 owner 鉴权下生效，访问者会在侧栏看到 🤖 AI 徽标和蓝色背景的回复。
+
+(b) 关闭父评论（不需要单独改 reply 的状态）：
+```bash
+curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $SHAREONE_API_KEY" \
+     -d '{"status": "resolved", "note": "已采纳，见最新版本"}'
+```
+`note` 会作为绿色「🤖 AI 已处理: …」高亮区块显示在评论卡片底部，给访问者一个明确的交代。
+
+#### 对于无法处理 / 无关的评论 — 必须 dismiss，不要无视
+
+```bash
+curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $SHAREONE_API_KEY" \
+     -d '{"status": "dismissed", "note": "页面中没有此元素，可能指的是另一份分享"}'
+```
+
+### 4.3 兼容旧接口
+
+旧的 `PUT /api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/resolve` `{resolved: true/false}` 仍然可用（已 deprecated），等价于把 `status` 切到 `resolved` 或 `open`，但**不会**附带 `note`，访问者拿不到 AI 的解释。**新代码请一律用 4.2 的 `/status` 接口**。
+
+### 4.4 关键准则速查
+
+| 准则 | 为什么 |
+|---|---|
+| 动手前先 `in_progress` | 让访问者看到「AI 在干活」 |
+| 改完一定要 `POST` 一条 `author_role=agent` 的回复 | 闭环的"答复"部分，没有它就只是状态变化、不是对话 |
+| `resolution_note` 要写人话 | "已把按钮改成主色" 比 "Applied." 有用 |
+| 不能处理就 `dismissed` + note | 不要让评论永远卡在 `open` |
+| 只对父评论改状态，回复不单独操作 | 状态语义属于 thread 整体 |
+| `unresolved` = `open + in_progress` | 拉单子默认用 `?status=unresolved` |
+
+
 
 ### 5. 构造请求并执行发布 (Execute Request)
 
@@ -173,30 +263,7 @@ curl -X PUT "https://shareone.app/api/v1/files/<YOUR_SHARE_ID>" \
 
 _(注意：传空字符串 `""` 表示取消密码或水印)_
 
-## 5. 协同与评论修改 (Collaboration & Comments)
-
-ShareOne 支持页面内容的协同评论，允许用户直接在 HTML 页面选中文本并提出修改意见。AI Agent 可以根据这些意见直接修改原内容并更新页面。
-
-**当用户要求处理评论时，请执行以下步骤**：
-
-1. **获取评论**：调用获取评论的 API 接口拉取当前页面的所有评论。
-   ```bash
-   curl -X GET "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments" \
-        -H "X-API-Key: $SHAREONE_API_KEY"
-   ```
-2. **分析评论与代码**：分析返回的评论 JSON 中的 `content`（用户的修改意见）和 `selected_text`（对应的选中原文），并在你维护的源文件或最近生成的代码中定位需要修改的位置。**注意：如果评论包含 `replies`，请将父评论和所有回复作为整体上下文阅读，综合得出最终修改方案，并必须经过用户确认后再进行修改。**
-3. **执行修改**：根据用户的评论意见对 HTML 或其他文件进行相应的修改。
-4. **更新线上内容**：将修改后的文件使用 PUT 接口更新到 ShareOne（参考场景 A：更新已有链接）。
-5. **更新评论状态**：修改完成后，调用更新评论状态的接口将对应父评论状态改为 `resolved`（已解决）。**注意：只需要对父评论进行状态修改。**
-   ```bash
-   curl -X PUT "https://shareone.app/api/v1/pages/<YOUR_SHARE_ID>/comments/<COMMENT_ID>" \
-        -H "Content-Type: application/json" \
-        -H "X-API-Key: $SHAREONE_API_KEY" \
-        -d '{"status": "resolved"}'
-   ```
-   注：如果因为大范围重构导致某些未解决的评论失去了原文锚点，页面在展示时会自动标识其为“失去锚点”(detached) 状态，你可以根据需要选择忽略它们或让用户确认。
-
-### 6. 异常处理与结果反馈 (Feedback)
+## 5. 异常处理与结果反馈 (Feedback)
 
 解析接口返回的 JSON。
 
