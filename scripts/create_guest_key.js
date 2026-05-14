@@ -1,36 +1,35 @@
-const http = require('http');
-const https = require('https');
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
+const {
+    isSudoclaw,
+    requestShareOneJson,
+    saveLocalApiKey,
+} = require('./shareone_client');
 
-const baseUrl = process.env.SHAREONE_BASE_URL || 'https://shareone.app';
-const client = baseUrl.startsWith('https') ? https : http;
-const url = new URL('/api/v1/agent-guest-key', baseUrl);
+if (isSudoclaw()) {
+    console.log("ERROR:SUDOCLAW_MANAGED_KEY");
+    console.log("Sudoclaw 中无法由 skill 创建或保存临时 ShareOne API Key。");
+    console.log("请先打开 https://shareone.app 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。");
+    process.exit(1);
+}
 
-const req = client.request(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-}, (res) => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-        if (res.statusCode === 200) {
-            const result = JSON.parse(data);
-            if (result.api_key) {
-                const credPath = path.join(os.homedir(), '.shareone_credentials');
-                fs.writeFileSync(credPath, JSON.stringify({ api_key: result.api_key }));
-                console.log(`GUEST_KEY_CREATED:${result.api_key}`);
-            }
-        } else if (res.statusCode === 429) {
+async function createGuestKey() {
+    try {
+        const result = await requestShareOneJson('/api/v1/agent-guest-key', {
+            method: 'POST',
+            authRequired: false,
+        });
+        if (result.api_key) {
+            saveLocalApiKey(result.api_key);
+            console.log(`GUEST_KEY_CREATED:${result.api_key}`);
+            return;
+        }
+        console.log("ERROR:INVALID_RESPONSE");
+    } catch (error) {
+        if (error.statusCode === 429) {
             console.log("ERROR:RATE_LIMIT_EXCEEDED");
         } else {
-            console.log(`ERROR:HTTP_${res.statusCode}`);
+            console.log(`ERROR:${error.message}`);
         }
-    });
-});
+    }
+}
 
-req.on('error', (e) => {
-    console.log(`ERROR:${e.message}`);
-});
-req.end();
+createGuestKey();

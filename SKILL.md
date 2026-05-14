@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.1.0
+version: 1.1.1
 description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
@@ -29,7 +29,10 @@ description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOn
 - "修改这个 ShareOne 链接的内容：https://shareone.app/s/xxx"
 
 **前置条件 (Prerequisites):**
-用户需要拥有 ShareOne 的 API 凭证 (API Key)。请确保已在环境变量中设置 `SHAREONE_API_KEY`。
+用户需要拥有 ShareOne 的 API 凭证 (API Key)。
+
+- **Sudoclaw 环境**：API Key 必须由 Sudoclaw 管理。请用户先在 [ShareOne 官网](https://shareone.app) 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。Skill 在 Sudoclaw 中**不得**询问用户粘贴 API Key、不得保存 API Key、不得创建临时 API Key。
+- **其他 AI Agent 工具**：可以使用环境变量 `SHAREONE_API_KEY`，或通过本 skill 的脚本保存/创建本地凭证。
 
 ---
 
@@ -46,29 +49,44 @@ description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOn
 - **如果用户指定了文件**：使用用户指定的文件。如果用户没有指定，请根据上下文寻找你最近一次生成或编辑的文件（如 `.html`, `.pdf`, `.pptx`, `.docx`）。
 
 - **校验文件是否存在**：如果你通过上述步骤生成或锁定了文件，但文件仍不存在，停止并告知用户。
-- **获取或创建 API Key**：执行本技能目录下的 `check_api_key.js` 脚本，它会依次检查环境变量、本地配置文件。如果都没有找到，脚本会输出 `KEY_NOT_FOUND`。
+- **检查 API Key / Sudoclaw Auth Proxy**：执行本技能目录下的 `check_api_key.js` 脚本。
 
 ```bash
 node scripts/check_api_key.js
 ```
 
-- **如果脚本输出 `KEY_FOUND:<api_key>`**：将该 API Key 用于后续的发布请求，直接进入第 2 步。
-- **如果脚本输出 `KEY_NOT_FOUND`**：你**必须暂停发布流程**，并向用户询问是否已有 API Key：
+- **如果脚本输出 `SUDOCLAW_KEY_FOUND`**：说明当前在 Sudoclaw 中，且 Sudoclaw 已配置 ShareOne API Key。后续发布命令**不要传 `--api-key`**，直接进入第 2 步。
+- **如果脚本输出 `SUDOCLAW_KEY_NOT_FOUND`**：你**必须停止发布流程**，并只提示用户完成 Sudoclaw 密钥配置。**不要询问用户是否有 API Key，不要让用户在聊天中粘贴 API Key，不要调用 `save_api_key.js`，不要调用 `create_guest_key.js`。**
+
+  请回复用户：
+
+  > 我检测到当前运行在 Sudoclaw 中，但 Sudoclaw 尚未配置 ShareOne API Key。
+  >
+  > 请先完成以下步骤后再让我继续发布：
+  > 1. 打开 https://shareone.app 注册或获取 ShareOne API Key。
+  > 2. 回到 Sudoclaw 的密钥管理。
+  > 3. 添加并启用 ShareOne API Key。
+  > 4. 重新发起发布请求。
+
+- **如果脚本输出 `KEY_FOUND:<api_key>`**：这是非 Sudoclaw 环境。将该 API Key 用于后续的 direct 模式发布请求，直接进入第 2 步。
+- **如果脚本输出 `KEY_NOT_FOUND`**：这是非 Sudoclaw 环境。你**必须暂停发布流程**，并向用户询问是否已有 API Key：
 
   > 💡 **提示**：我没有找到您的 ShareOne API Key。
   > 请问您是否已经拥有 API Key？
   >
   > - 如果有，请直接回复您的 API Key（例如 `sk-xxx`），我将为您保存并继续发布。
-  > - 如果没有，请回复“没有”或“创建”，我将自动为您创建一个临时 API Key。
+  > - 如果没有，请回复“没有”或“创建”。在非 Sudoclaw 环境中，我可以为您创建一个临时 API Key。
+  >
+  > 注意：以上询问只适用于非 Sudoclaw 环境；Sudoclaw 环境缺 key 时只能引导用户去 Sudoclaw 密钥管理中配置。
 
-- **根据用户的回复进行处理**：
+- **仅在非 Sudoclaw 环境中，根据用户的回复进行处理**：
   - **如果用户回复了 API Key (例如 `sk-xxx`)**：
     执行本技能目录下的 `save_api_key.js` 脚本将用户提供的 Key 保存到本地，然后使用该 Key 继续发布（进入第 2 步）：
     ```bash
     node scripts/save_api_key.js <用户提供的KEY>
     ```
   - **如果用户回复“没有”或“创建”**：
-    执行本技能目录下的 `create_guest_key.js` 脚本调用接口创建临时 API Key 并保存到本地：
+    执行本技能目录下的 `create_guest_key.js` 脚本调用接口创建临时 API Key 并保存到本地。**Sudoclaw 环境禁止执行此步骤。**
 
     ```bash
     node scripts/create_guest_key.js
@@ -106,18 +124,21 @@ ShareOne 页面支持访客划词评论，并提供了完整的**状态机**让 
 
 如果用户只是说"帮我看看这个页面的评论"，调用：
 
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments?status=unresolved"
 ```
-GET https://shareone.app/api/v1/shares/<SHARE_ID>/comments?status=unresolved
-```
+
 - `status` 可选值：`all` / `open` / `in_progress` / `resolved` / `dismissed` / `unresolved`（= open + in_progress）。
 - **⚠️ 重要：** 只展示评论内容，**绝对不要自作主张地开始改源文件**，等用户给下一步指令。
 - **⚠️ 评论与回复的整体理解：** 评论数据中可能包含 `replies`（回复）。你**必须**将父评论及其所有回复作为一个**"讨论上下文 (Thread)"**来整体阅读、综合理解最终共识。不要把每条回复当成独立的修改指令。所有回复继承父评论的锚点（`highlighter_data` 和 `quote`）。
 
 如果只想看「现在还有没有未处理的事」，用极轻量的摘要：
-```
-GET https://shareone.app/api/v1/shares/<SHARE_ID>/comments/summary
+
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/summary"
 # -> { total, open, in_progress, resolved, dismissed, last_activity_at }
 ```
+
 返回 `open == 0` 时无需拉全量。
 
 ### 4.2 标准闭环：处理评论（用户明确要求时）
@@ -127,19 +148,19 @@ GET https://shareone.app/api/v1/shares/<SHARE_ID>/comments/summary
 #### 步骤 1：认领 — 必须在动手之前做
 
 ```bash
-curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $SHAREONE_API_KEY" \
-     -d '{"status": "in_progress"}'
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+  --method PUT \
+  --data '{"status": "in_progress"}'
 ```
+
 访问者立刻在页面侧栏看到「处理中」徽标和顶部的「🤖 AI 正在处理 N 条评论…」横幅。**跳过这一步 = 用户感受不到 AI 在干活。**
 
 #### 步骤 2：取源
 
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/download"
 ```
-GET https://shareone.app/api/v1/shares/<SHARE_ID>/download
-Headers: X-API-Key: $SHAREONE_API_KEY
-```
+
 返回 `{ content, filename, content_type }`。
 
 #### 步骤 3：精准应用修改
@@ -157,36 +178,31 @@ Headers: X-API-Key: $SHAREONE_API_KEY
 #### 步骤 5：写回复 + 关闭评论 — 必须两步都做
 
 (a) 在该父评论下发一条 **AI 回复**（明确告诉访问者改了什么）：
+
 ```bash
-curl -X POST "https://shareone.app/api/v1/shares/<SHARE_ID>/comments" \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $SHAREONE_API_KEY" \
-     -d '{
-       "parent_id": "<COMMENT_ID>",
-       "quote": "<父评论的 quote>",
-       "highlighter_data": "<父评论的 highlighter_data>",
-       "content": "已按你的建议把标题改成 …，并调整了 …",
-       "author_role": "agent"
-     }'
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments" \
+  --method POST \
+  --data '{"parent_id":"<COMMENT_ID>","quote":"<父评论的 quote>","highlighter_data":"<父评论的 highlighter_data>","content":"已按你的建议把标题改成 ...，并调整了 ...","author_role":"agent"}'
 ```
+
 > `author_role: "agent"` 只在 owner 鉴权下生效，访问者会在侧栏看到 🤖 AI 徽标和蓝色背景的回复。
 
 (b) 关闭父评论（不需要单独改 reply 的状态）：
+
 ```bash
-curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $SHAREONE_API_KEY" \
-     -d '{"status": "resolved", "note": "已采纳，见最新版本"}'
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+  --method PUT \
+  --data '{"status": "resolved", "note": "已采纳，见最新版本"}'
 ```
+
 `note` 会作为绿色「🤖 AI 已处理: …」高亮区块显示在评论卡片底部，给访问者一个明确的交代。
 
 #### 对于无法处理 / 无关的评论 — 必须 dismiss，不要无视
 
 ```bash
-curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $SHAREONE_API_KEY" \
-     -d '{"status": "dismissed", "note": "页面中没有此元素，可能指的是另一份分享"}'
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
+  --method PUT \
+  --data '{"status": "dismissed", "note": "页面中没有此元素，可能指的是另一份分享"}'
 ```
 
 ### 4.3 兼容旧接口
@@ -195,16 +211,14 @@ curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>
 
 ### 4.4 关键准则速查
 
-| 准则 | 为什么 |
-|---|---|
-| 动手前先 `in_progress` | 让访问者看到「AI 在干活」 |
+| 准则                                              | 为什么                                           |
+| ------------------------------------------------- | ------------------------------------------------ |
+| 动手前先 `in_progress`                            | 让访问者看到「AI 在干活」                        |
 | 改完一定要 `POST` 一条 `author_role=agent` 的回复 | 闭环的"答复"部分，没有它就只是状态变化、不是对话 |
-| `resolution_note` 要写人话 | "已把按钮改成主色" 比 "Applied." 有用 |
-| 不能处理就 `dismissed` + note | 不要让评论永远卡在 `open` |
-| 只对父评论改状态，回复不单独操作 | 状态语义属于 thread 整体 |
-| `unresolved` = `open + in_progress` | 拉单子默认用 `?status=unresolved` |
-
-
+| `resolution_note` 要写人话                        | "已把按钮改成主色" 比 "Applied." 有用            |
+| 不能处理就 `dismissed` + note                     | 不要让评论永远卡在 `open`                        |
+| 只对父评论改状态，回复不单独操作                  | 状态语义属于 thread 整体                         |
+| `unresolved` = `open + in_progress`               | 拉单子默认用 `?status=unresolved`                |
 
 ### 5. 构造请求并执行发布 (Execute Request)
 
@@ -222,23 +236,23 @@ curl -X PUT "https://shareone.app/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>
 
 **如果是首次创建 (POST):**
 
-执行本技能目录下的 `upload_page.js` 脚本：
+执行本技能目录下的 `upload_page.js` 脚本。Sudoclaw 环境不要传 `--api-key`；非 Sudoclaw direct 模式可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
 
 ```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
 ```
 
 > **注意**：只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等字眼时，才加上 `--allow-comments true` 参数。默认是不开启评论的。
 
 **如果是更新已有链接 (PUT):**
 
-执行本技能目录下的 `upload_page.js` 脚本，并传入 `--share-id` 参数：
+执行本技能目录下的 `upload_page.js` 脚本，并传入 `--share-id` 参数。Sudoclaw 环境不要传 `--api-key`。
 
 ```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--allow-comments true/false]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true/false]
 ```
 
-> **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
+> **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。如果用户要求修改或清除密码/水印，也可以在 PUT 更新时传入 `--password` 或 `--watermark`；传空字符串 `""` 表示清除对应设置。
 
 #### 场景 B：二进制文件 (PDF, PPTX, Word 等)
 
@@ -247,18 +261,17 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --api-key $SHAREONE_API_KEY --fil
 **如果是首次创建 (POST):**
 
 ```bash
-node scripts/shareone_upload.js "<FILE_PATH>" --api-key $SHAREONE_API_KEY [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
+node scripts/shareone_upload.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
 ```
 
 **如果是更新已有链接的密码或水印 (PUT):**
 
-对于已经上传的二进制文件，如果用户要求修改密码或水印，请调用 `update_file_meta.js` 脚本（假设存在，或通过 curl 直接调用 `/api/v1/files/{share_id}` 接口）：
+对于已经上传的二进制文件，如果用户要求修改密码或水印，请调用通用鉴权请求脚本：
 
 ```bash
-curl -X PUT "https://shareone.app/api/v1/files/<YOUR_SHARE_ID>" \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $SHAREONE_API_KEY" \
-     -d '{"password": "NEW_PASSWORD", "watermark": "NEW_WATERMARK"}'
+node scripts/shareone_api_request.js "/api/v1/files/<YOUR_SHARE_ID>" \
+  --method PUT \
+  --data '{"password": "NEW_PASSWORD", "watermark": "NEW_WATERMARK"}'
 ```
 
 _(注意：传空字符串 `""` 表示取消密码或水印)_

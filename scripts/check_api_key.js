@@ -1,31 +1,30 @@
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
+const {
+    isSudoclaw,
+    readLocalApiKey,
+    requestShareOneJson,
+} = require('./shareone_client');
 
-function checkApiKey() {
-    // 1. Check environment variable
-    let apiKey = process.env.SHAREONE_API_KEY;
+async function checkApiKey() {
+    if (isSudoclaw()) {
+        try {
+            await requestShareOneJson('/api/v1/me', { method: 'GET' });
+            console.log('SUDOCLAW_KEY_FOUND');
+        } catch (_) {
+            console.log('SUDOCLAW_KEY_NOT_FOUND');
+        }
+        return;
+    }
+
+    let apiKey = process.env.SHAREONE_API_KEY || readLocalApiKey();
     if (apiKey) {
         console.log(`KEY_FOUND:${apiKey}`);
         return;
     }
 
-    // 2. Check local credentials file
-    const credPath = path.join(os.homedir(), '.shareone_credentials');
-    if (fs.existsSync(credPath)) {
-        try {
-            const data = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-            apiKey = data.api_key;
-            if (apiKey) {
-                console.log(`KEY_FOUND:${apiKey}`);
-                return;
-            }
-        } catch (e) {
-            // Ignore errors
-        }
-    }
-
     console.log("KEY_NOT_FOUND");
 }
 
-checkApiKey();
+checkApiKey().catch((error) => {
+    console.error(`ERROR:${error.message}`);
+    process.exit(1);
+});

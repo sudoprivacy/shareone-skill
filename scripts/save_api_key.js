@@ -1,6 +1,10 @@
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
+const { isSudoclaw, saveLocalApiKey } = require('./shareone_client');
+
+if (isSudoclaw()) {
+    console.log("ERROR:SUDOCLAW_MANAGED_KEY");
+    console.log("请在 Sudoclaw 的密钥管理中设置 ShareOne API Key。");
+    process.exit(1);
+}
 
 const apiKey = process.argv[2];
 if (!apiKey) {
@@ -8,6 +12,5 @@ if (!apiKey) {
     process.exit(1);
 }
 
-const credPath = path.join(os.homedir(), '.shareone_credentials');
-fs.writeFileSync(credPath, JSON.stringify({ api_key: apiKey }));
+saveLocalApiKey(apiKey);
 console.log("KEY_SAVED");

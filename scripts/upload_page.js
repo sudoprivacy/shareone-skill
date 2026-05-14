@@ -1,10 +1,13 @@
-const http = require('http');
-const https = require('https');
 const fs = require('fs');
+const {
+    isSudoclaw,
+    requestShareOneBuffer,
+    resolveDirectApiKey,
+} = require('./shareone_client');
 
 const args = process.argv.slice(2);
 let filePath = null;
-let apiKey = process.env.SHAREONE_API_KEY || "";
+let apiKey = null;
 let filename = "shared_content.html";
 let password = null;
 let watermark = null;
@@ -34,54 +37,56 @@ if (!filePath) {
     process.exit(1);
 }
 
-const content = fs.readFileSync(filePath, "utf-8");
-
-const payload = {
-    filename: filename,
-    html_content: content
-};
-
-if (!shareId) {
-    if (password) payload.password = password;
-    if (watermark) payload.watermark = watermark;
+if (isSudoclaw() && apiKey) {
+    console.error("ERROR:SUDOCLAW_MANAGED_KEY");
+    console.error("Sudoclaw 模式下不要传 --api-key；请在 Sudoclaw 密钥管理中配置 ShareOne API Key。");
+    process.exit(1);
 }
 
-if (allowComments !== null) {
-    payload.allow_comments = allowComments;
+if (!isSudoclaw() && !resolveDirectApiKey(apiKey)) {
+    console.error("ERROR:KEY_NOT_FOUND");
+    process.exit(1);
 }
 
-const data = JSON.stringify(payload);
+async function uploadPage() {
+    const content = fs.readFileSync(filePath, "utf-8");
 
-const baseUrl = process.env.SHAREONE_BASE_URL || 'https://shareone.app';
-const client = baseUrl.startsWith('https') ? https : http;
+    const payload = {
+        filename: filename,
+        html_content: content
+    };
 
-const urlPath = shareId
-    ? `/api/v1/pages/${shareId}`
-    : '/api/v1/pages';
+    if (password !== null) payload.password = password;
+    if (watermark !== null) payload.watermark = watermark;
 
-const url = new URL(urlPath, baseUrl);
-
-const method = shareId ? 'PUT' : 'POST';
-
-const req = client.request(url, {
-    method: method,
-    headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-        'Content-Length': Buffer.byteLength(data)
+    if (allowComments !== null) {
+        payload.allow_comments = allowComments;
     }
-}, (res) => {
-    let responseData = '';
-    res.on('data', chunk => responseData += chunk);
-    res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(responseData);
-        } else {
-            console.log(`Error: ${res.statusCode}`, responseData);
-        }
-    });
-});
 
-req.on('error', (e) => console.error(e));
-req.write(data);
-req.end();
+    const data = JSON.stringify(payload);
+    const urlPath = shareId
+        ? `/api/v1/pages/${shareId}`
+        : '/api/v1/pages';
+
+    const method = shareId ? 'PUT' : 'POST';
+
+    const res = await requestShareOneBuffer(urlPath, {
+        method: method,
+        apiKey,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(data)
+        }
+    }, data);
+    console.log(res.text);
+}
+
+uploadPage().catch((error) => {
+    if (isSudoclaw() && (error.statusCode === 401 || error.statusCode === 502)) {
+        console.error("ERROR:SUDOCLAW_KEY_NOT_FOUND");
+        console.error("请先打开 https://shareone.app 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。");
+    } else {
+        console.error(`ERROR:${error.message}`);
+    }
+    process.exit(1);
+});
