@@ -43,6 +43,12 @@ node scripts/check_api_key.js
 
 确认输出 `SUDOWORK_KEY_FOUND` 后继续原操作。
 
+如果输出 `ERROR:SUDOWORK_AUTH_PROXY_SAVE_FAILED`，暂停操作并提示：
+
+> 我检测到当前运行在 Sudowork 中，但通过 Auth Proxy 设置 ShareOne API Key 失败。
+> 请前往 Sudowork 的密钥管理手动添加 API Key，操作路径：【远程连接】-【密钥管理】。
+> 添加完成后请回复“已添加”，我会重新检查并继续。
+
 ### 用户没有 Key 或要求创建
 
 执行：
@@ -58,6 +64,13 @@ node scripts/create_guest_key.js
 > 请妥善保存此 API Key。为了方便您后续管理分享的链接，请尽快打开上面的链接绑定您的永久账号。
 
 然后继续原操作。Sudowork 环境会把临时 API Key 保存到 Auth Proxy secrets。
+
+如果输出 `ERROR:SUDOWORK_AUTH_PROXY_SAVE_FAILED:<api_key>`，暂停操作并提示：
+
+> 已为您自动分配临时 API Key：`<api_key>`
+> 但我检测到当前运行在 Sudowork 中，通过 Auth Proxy 自动保存 API Key 失败。
+> 请前往 Sudowork 的密钥管理手动添加该 API Key，操作路径：【远程连接】-【密钥管理】。
+> 添加完成后请回复“已添加”，我会重新检查并继续。
 
 如果输出 `ERROR:RATE_LIMIT_EXCEEDED`，暂停操作并提示：
 
