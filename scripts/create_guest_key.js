@@ -1,24 +1,24 @@
 const {
-    isSudoclaw,
+    isSudowork,
+    requestPublicShareOneJson,
     requestShareOneJson,
     saveLocalApiKey,
+    saveSudoworkApiKey,
 } = require('./shareone_client');
-
-if (isSudoclaw()) {
-    console.log("ERROR:SUDOCLAW_MANAGED_KEY");
-    console.log("Sudoclaw 中无法由 skill 创建或保存临时 ShareOne API Key。");
-    console.log("请先打开 https://shareone.app 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。");
-    process.exit(1);
-}
 
 async function createGuestKey() {
     try {
-        const result = await requestShareOneJson('/api/v1/agent-guest-key', {
+        const requestJson = isSudowork() ? requestPublicShareOneJson : requestShareOneJson;
+        const result = await requestJson('/api/v1/agent-guest-key', {
             method: 'POST',
             authRequired: false,
         });
         if (result.api_key) {
-            saveLocalApiKey(result.api_key);
+            if (isSudowork()) {
+                await saveSudoworkApiKey(result.api_key);
+            } else {
+                saveLocalApiKey(result.api_key);
+            }
             console.log(`GUEST_KEY_CREATED:${result.api_key}`);
             return;
         }

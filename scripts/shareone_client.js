@@ -6,9 +6,15 @@ const path = require('path');
 
 const DEFAULT_BASE_URL = 'https://shareone.app';
 const CREDENTIALS_PATH = path.join(os.homedir(), '.shareone_credentials');
+const SUDOWORK_SECRET_NAMESPACE = 'service:shareone';
+const SUDOWORK_SECRET_KEY = 'X-API-Key';
 
-function isSudoclaw() {
+function isSudowork() {
     return Boolean(process.env.SUDOWORK_AUTH_PROXY_URL && process.env.SUDOWORK_AUTH_PROXY_TOKEN);
+}
+
+function getSudoworkBaseUrl() {
+    return process.env.SUDOWORK_AUTH_PROXY_BASE_URL || String(process.env.SUDOWORK_AUTH_PROXY_URL || '').replace(/\/proxy\/?$/, '');
 }
 
 function getBaseUrl() {
@@ -35,6 +41,12 @@ function resolveDirectApiKey(explicitApiKey) {
 
 function saveLocalApiKey(apiKey) {
     fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ api_key: apiKey }));
+}
+
+function deleteLocalApiKey() {
+    if (!fs.existsSync(CREDENTIALS_PATH)) return false;
+    fs.unlinkSync(CREDENTIALS_PATH);
+    return true;
 }
 
 function appendPath(baseUrl, apiPath) {
@@ -78,11 +90,82 @@ function requestBuffer(url, options = {}, body = null) {
     });
 }
 
+function buildJsonRequestBody(payload) {
+    const body = payload === null ? null : JSON.stringify(payload);
+    const headers = { 'Content-Type': 'application/json' };
+    if (body !== null) headers['Content-Length'] = Buffer.byteLength(body);
+    return { body, headers };
+}
+
+async function requestJsonUrl(url, options = {}, payload = null) {
+    const { body, headers } = buildJsonRequestBody(payload);
+    const res = await requestBuffer(url, {
+        ...options,
+        headers: {
+            ...headers,
+            ...(options.headers || {}),
+        },
+    }, body);
+    return JSON.parse(res.text);
+}
+
+async function requestPublicShareOneJson(apiPath, options = {}, payload = null) {
+    return requestJsonUrl(appendPath(getBaseUrl(), apiPath), options, payload);
+}
+
+function buildSudoworkSecretsUrl(pathSuffix = '') {
+    const baseUrl = getSudoworkBaseUrl();
+    if (!baseUrl) {
+        throw new Error('SUDOWORK_AUTH_PROXY_BASE_URL is not available');
+    }
+    return appendPath(baseUrl, `/secrets${pathSuffix}`);
+}
+
+async function requestSudoworkSecrets(pathSuffix = '', options = {}, payload = null) {
+    if (!isSudowork()) {
+        throw new Error('Sudowork environment is not available');
+    }
+    const { body, headers } = buildJsonRequestBody(payload);
+    const res = await requestBuffer(buildSudoworkSecretsUrl(pathSuffix), {
+        ...options,
+        headers: {
+            ...headers,
+            ...(options.headers || {}),
+            Authorization: `Bearer ${process.env.SUDOWORK_AUTH_PROXY_TOKEN}`,
+        },
+    }, body);
+    return JSON.parse(res.text);
+}
+
+async function listSudoworkSecrets(namespace = SUDOWORK_SECRET_NAMESPACE) {
+    const query = `?namespace=${encodeURIComponent(namespace)}`;
+    const result = await requestSudoworkSecrets(query, { method: 'GET' }, null);
+    return Array.isArray(result.data) ? result.data : [];
+}
+
+async function hasSudoworkApiKey() {
+    const secrets = await listSudoworkSecrets(SUDOWORK_SECRET_NAMESPACE);
+    return secrets.some(secret => secret && secret.namespace === SUDOWORK_SECRET_NAMESPACE && secret.key === SUDOWORK_SECRET_KEY);
+}
+
+async function saveSudoworkApiKey(apiKey) {
+    const pathSuffix = `/${encodeURIComponent(SUDOWORK_SECRET_NAMESPACE)}/${encodeURIComponent(SUDOWORK_SECRET_KEY)}`;
+    return requestSudoworkSecrets(pathSuffix, { method: 'PUT' }, {
+        value: apiKey,
+        description: 'ShareOne API Key',
+    });
+}
+
+async function deleteSudoworkApiKey() {
+    const pathSuffix = `/${encodeURIComponent(SUDOWORK_SECRET_NAMESPACE)}/${encodeURIComponent(SUDOWORK_SECRET_KEY)}`;
+    return requestSudoworkSecrets(pathSuffix, { method: 'DELETE' }, null);
+}
+
 function buildShareOneRequest(apiPath, options = {}) {
     const targetUrl = appendPath(getBaseUrl(), apiPath);
     const headers = { ...(options.headers || {}) };
 
-    if (isSudoclaw()) {
+    if (isSudowork()) {
         delete headers['X-API-Key'];
         delete headers['x-api-key'];
         return {
@@ -97,7 +180,6 @@ function buildShareOneRequest(apiPath, options = {}) {
                     'X-Auth-Scheme': 'header',
                     'X-Auth-Header': 'X-API-Key',
                     'X-Secret-Key': 'X-API-Key'
-
                 },
             },
         };
@@ -123,30 +205,36 @@ async function requestShareOneBuffer(apiPath, options = {}, body = null) {
 }
 
 async function requestShareOneJson(apiPath, options = {}, payload = null) {
-    const body = payload === null ? null : JSON.stringify(payload);
-    const headers = {
-        ...(options.headers || {}),
-        'Content-Type': 'application/json',
-    };
-    if (body !== null) headers['Content-Length'] = Buffer.byteLength(body);
+    const { body, headers } = buildJsonRequestBody(payload);
 
     const res = await requestShareOneBuffer(apiPath, {
         ...options,
-        headers,
+        headers: {
+            ...headers,
+            ...(options.headers || {}),
+        },
     }, body);
     return JSON.parse(res.text);
 }
 
 module.exports = {
     DEFAULT_BASE_URL,
+    SUDOWORK_SECRET_KEY,
+    SUDOWORK_SECRET_NAMESPACE,
     appendPath,
+    deleteLocalApiKey,
+    deleteSudoworkApiKey,
     getBaseUrl,
     getCredentialsPath,
-    isSudoclaw,
+    hasSudoworkApiKey,
+    isSudowork,
+    listSudoworkSecrets,
     readLocalApiKey,
     requestBuffer,
+    requestPublicShareOneJson,
     requestShareOneBuffer,
     requestShareOneJson,
     resolveDirectApiKey,
     saveLocalApiKey,
+    saveSudoworkApiKey,
 };

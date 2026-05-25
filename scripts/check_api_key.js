@@ -1,16 +1,16 @@
 const {
-    isSudoclaw,
+    hasSudoworkApiKey,
+    isSudowork,
     readLocalApiKey,
-    requestShareOneJson,
 } = require('./shareone_client');
 
 async function checkApiKey() {
-    if (isSudoclaw()) {
+    if (isSudowork()) {
         try {
-            await requestShareOneJson('/api/v1/me', { method: 'GET' });
-            console.log('SUDOCLAW_KEY_FOUND');
+            const found = await hasSudoworkApiKey();
+            console.log(found ? 'SUDOWORK_KEY_FOUND' : 'SUDOWORK_KEY_NOT_FOUND');
         } catch (_) {
-            console.log('SUDOCLAW_KEY_NOT_FOUND');
+            console.log('SUDOWORK_KEY_NOT_FOUND');
         }
         return;
     }

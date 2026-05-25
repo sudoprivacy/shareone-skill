@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const {
-    isSudoclaw,
+    isSudowork,
     requestShareOneBuffer,
     resolveDirectApiKey,
 } = require('./shareone_client');
@@ -29,13 +29,13 @@ if (!apiPath) {
     process.exit(1);
 }
 
-if (isSudoclaw() && apiKey) {
-    console.error("ERROR:SUDOCLAW_MANAGED_KEY");
-    console.error("Sudoclaw 模式下不要传 --api-key；请在 Sudoclaw 密钥管理中配置 ShareOne API Key。");
+if (isSudowork() && apiKey) {
+    console.error("ERROR:SUDOWORK_MANAGED_KEY");
+    console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
     process.exit(1);
 }
 
-if (!isSudoclaw() && !resolveDirectApiKey(apiKey)) {
+if (!isSudowork() && !resolveDirectApiKey(apiKey)) {
     console.error("ERROR:KEY_NOT_FOUND");
     process.exit(1);
 }
@@ -55,9 +55,9 @@ requestShareOneBuffer(apiPath, {
 }, body).then((res) => {
     if (res.text) console.log(res.text);
 }).catch((error) => {
-    if (isSudoclaw() && (error.statusCode === 401 || error.statusCode === 502)) {
-        console.error("ERROR:SUDOCLAW_KEY_NOT_FOUND");
-        console.error("请先打开 https://shareone.app 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。");
+    if (isSudowork() && (error.statusCode === 401 || error.statusCode === 502)) {
+        console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
+        console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
     } else {
         console.error(`ERROR:${error.message}`);
     }

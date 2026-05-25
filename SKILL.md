@@ -1,17 +1,16 @@
 ---
 name: shareone
-version: 1.1.1
+version: 1.1.4
 description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
 # AI Agent 技能：发布到 ShareOne (shareone)
 
-这个 Skill 允许 AI Agent（如Openclaw等）将当前生成的历史会话以及HTML/PDF/PPT等文件，自动发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接。
+这个 Skill 允许 AI Agent（如 Openclaw 等）将当前生成的历史会话以及 HTML/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接。
 
 ## 使用说明与触发条件
 
-**如何触发 (Triggering):**
-当用户表达出以下意图时，应主动调用此技能：
+当用户表达出以下意图时，应主动使用此技能：
 
 - "帮我把 `index.html` 发布到 ShareOne"
 - "把我刚才生成的网页发布，给我个链接"
@@ -28,274 +27,66 @@ description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOn
 - "根据这个链接的评论修改页面：https://shareone.app/s/xxx"
 - "修改这个 ShareOne 链接的内容：https://shareone.app/s/xxx"
 
-**前置条件 (Prerequisites):**
-用户需要拥有 ShareOne 的 API 凭证 (API Key)。
+## 总规则：先路由，再读取子流程
 
-- **Sudoclaw 环境**：API Key 必须由 Sudoclaw 管理。请用户先在 [ShareOne 官网](https://shareone.app) 注册或获取 API Key，然后回到 Sudoclaw 的密钥管理中添加并启用 ShareOne API Key。Skill 在 Sudoclaw 中**不得**询问用户粘贴 API Key、不得保存 API Key、不得创建临时 API Key。
-- **其他 AI Agent 工具**：可以使用环境变量 `SHAREONE_API_KEY`，或通过本 skill 的脚本保存/创建本地凭证。
+入口文件只负责判断用户意图、判断环境、选择需要阅读的 workflow。不要一次性读取所有 `workflows/*.md` 文件；只读取当前任务需要的子文件。
 
----
-
-## 核心执行指令 / Execution Instructions
-
-当你被要求发布文件到 ShareOne 时，请**严格按照以下步骤执行**：
-
-### 1. 识别目标与环境预检 (Identify & Pre-flight)
-
-找出用户明确指定要发布的文件，或者提取对话内容：
-
-- **如果用户要求分享对话/大段文本/代码**：请首先从你的对话历史中提取上一轮生成的完整文本或代码块。将其保存到当前目录下的一个临时文件中，例如 `share_note.md` 或 `share_note.html`。
-  - **建议**：如果是 Markdown 格式内容，建议在保存为 `.html` 前，使用简单的 HTML 模板包裹它，或者在 ShareOne 后端支持 Markdown 渲染的情况下直接发送 Markdown。如果无法确定，优先生成美观的 `.html` 文件。
-- **如果用户指定了文件**：使用用户指定的文件。如果用户没有指定，请根据上下文寻找你最近一次生成或编辑的文件（如 `.html`, `.pdf`, `.pptx`, `.docx`）。
-
-- **校验文件是否存在**：如果你通过上述步骤生成或锁定了文件，但文件仍不存在，停止并告知用户。
-- **检查 API Key / Sudoclaw Auth Proxy**：执行本技能目录下的 `check_api_key.js` 脚本。
+所有需要 ShareOne API 的操作，都先运行：
 
 ```bash
 node scripts/check_api_key.js
 ```
 
-- **如果脚本输出 `SUDOCLAW_KEY_FOUND`**：说明当前在 Sudoclaw 中，且 Sudoclaw 已配置 ShareOne API Key。后续发布命令**不要传 `--api-key`**，直接进入第 2 步。
-- **如果脚本输出 `SUDOCLAW_KEY_NOT_FOUND`**：你**必须停止发布流程**，并只提示用户完成 Sudoclaw 密钥配置。**不要询问用户是否有 API Key，不要让用户在聊天中粘贴 API Key，不要调用 `save_api_key.js`，不要调用 `create_guest_key.js`。**
+用输出判断环境与凭据状态：
 
-  请回复用户：
+- `SUDOWORK_KEY_FOUND`：当前在 Sudowork 中，且 Sudowork 已配置 ShareOne API Key。
+- `SUDOWORK_KEY_NOT_FOUND`：当前在 Sudowork 中，但还没有设置 ShareOne API Key。
+- `KEY_FOUND:<api_key>`：当前是普通 AI Agent 环境，且已找到 API Key。
+- `KEY_NOT_FOUND`：当前是普通 AI Agent 环境，且没有找到 API Key。
 
-  > 我检测到当前运行在 Sudoclaw 中，但 Sudoclaw 尚未配置 ShareOne API Key。
-  >
-  > 请先完成以下步骤后再让我继续发布：
-  > 1. 打开 https://shareone.app 注册或获取 ShareOne API Key。
-  > 2. 回到 Sudoclaw 的密钥管理。
-  > 3. 添加并启用 ShareOne API Key。
-  > 4. 重新发起发布请求。
+术语固定：
 
-- **如果脚本输出 `KEY_FOUND:<api_key>`**：这是非 Sudoclaw 环境。将该 API Key 用于后续的 direct 模式发布请求，直接进入第 2 步。
-- **如果脚本输出 `KEY_NOT_FOUND`**：这是非 Sudoclaw 环境。你**必须暂停发布流程**，并向用户询问是否已有 API Key：
+- Sudowork：发布、评论、通用请求命令不要传 `--api-key`，凭证由 Auth Proxy secrets 注入。
+- 普通 AI Agent：可以使用 `--api-key`、环境变量 `SHAREONE_API_KEY` 或本地凭证文件。
 
-  > 💡 **提示**：我没有找到您的 ShareOne API Key。
-  > 请问您是否已经拥有 API Key？
-  >
-  > - 如果有，请直接回复您的 API Key（例如 `sk-xxx`），我将为您保存并继续发布。
-  > - 如果没有，请回复“没有”或“创建”。在非 Sudoclaw 环境中，我可以为您创建一个临时 API Key。
-  >
-  > 注意：以上询问只适用于非 Sudoclaw 环境；Sudoclaw 环境缺 key 时只能引导用户去 Sudoclaw 密钥管理中配置。
+## 操作路由表
 
-- **仅在非 Sudoclaw 环境中，根据用户的回复进行处理**：
-  - **如果用户回复了 API Key (例如 `sk-xxx`)**：
-    执行本技能目录下的 `save_api_key.js` 脚本将用户提供的 Key 保存到本地，然后使用该 Key 继续发布（进入第 2 步）：
-    ```bash
-    node scripts/save_api_key.js <用户提供的KEY>
-    ```
-  - **如果用户回复“没有”或“创建”**：
-    执行本技能目录下的 `create_guest_key.js` 脚本调用接口创建临时 API Key 并保存到本地。**Sudoclaw 环境禁止执行此步骤。**
+根据用户意图读取对应 workflow：
 
-    ```bash
-    node scripts/create_guest_key.js
-    ```
+先按目标文件类型路由，再按用户动作路由。文件类型优先级最高。
 
-    - **如果输出 `GUEST_KEY_CREATED:<api_key>`**：将该 API Key 用于后续的发布请求，并在回复用户时加入以下提示：
-      > 💡 **提示**：已为您自动分配了临时 API Key：`<api_key>`。
-      > 为了方便您后续管理分享的链接，请前往 [ShareOne 官网](https://shareone.app/?key=<api_key>) 绑定您的永久账号。
-    - **如果输出 `ERROR:RATE_LIMIT_EXCEEDED`**：请暂停发布，并提示用户：
-      > ❌ **获取临时凭证失败**
-      > 您今天自动创建临时 API Key 的次数已达上限（每天最多5次）。请前往 [ShareOne 官网](https://shareone.app) 手动注册并获取 API Key。
+| 目标文件/内容类型 | 必须读取的 workflow |
+| --- | --- |
+| `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.zip` 或其他二进制文件 | `workflows/publish-binary-file.md` |
+| `.html`、`.md`、`.txt`、对话内容、大段文本、代码块，或已经包装成 HTML 的内容 | `workflows/publish-text-page.md` |
 
-### 2. 免责声明机制 (Smart Consent) - 必须执行 (MANDATORY)
+| 用户意图 | 需要读取的 workflow |
+| --- | --- |
+| 发布、分享、生成链接、上线、分享上一轮对话、大段文本或代码 | 先读 `workflows/environment-and-credentials.md`，再按文件类型读 `workflows/publish-text-page.md` 或 `workflows/publish-binary-file.md`，最后读 `workflows/result-and-errors.md` |
+| 删除、清除、移除、重置 ShareOne API Key | 读 `workflows/delete-api-key.md` |
+| 下载 ShareOne 链接的文件或源内容 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/download-file.md` |
+| 查看、拉取、总结 ShareOne 链接评论，但用户没有要求修改 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-view.md` |
+| 处理评论、根据评论修改页面、修复 ShareOne 链接内容 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-process.md`，必要时读 `workflows/publish-text-page.md`，最后读 `workflows/result-and-errors.md` |
+| 发布二进制文件，或更新已上传二进制文件的密码/水印 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/publish-binary-file.md`，最后读 `workflows/result-and-errors.md` |
 
-每次发布前，你**必须**向用户展示安全提示，并等待用户明确回复“同意”或“agree”后才能继续：
+## ShareOne 链接与 share_id
 
-> ⚠️ **发布前安全提示**
-> 在将页面发布到公网前，请您确认该页面内容符合相关法律法规要求。禁止发布反动、涉政、暴力、色情、侵权或恶意代码。上传的内容将免费托管保留 90 天。
-> 如果您的内容符合要求，请回复 **“同意”**，我将为您发布。
+当用户提供 ShareOne 链接时，从 `https://shareone.app/s/<share_id>` 中提取 `<share_id>`。
 
-- **用户同意后**：直接进入第 3 步继续发布。
+`/s/<share_id>` 是最终给用户访问的分享链接，不是上传 API endpoint。不要把 `/s/<share_id>` 当作发布地址，也不要直接向 `/s/<share_id>` PUT/POST 文件。
 
-### 3. 判断发布类型：创建 (POST) 还是 更新 (PUT)
+`share_id` 可用于查看评论、处理评论、下载源文件、文本页面 PUT 更新，以及已上传二进制文件的密码/水印更新。
 
-检查对话上下文。如果你在这个会话中，已经为**同一个文件**生成过 ShareOne 链接，你应该提取之前的 `share_id`（16位字符串）。
+如果目标是 `.pptx`、`.ppt`、`.pdf`、Word、图片、zip 等二进制文件，“发布这个文件”默认必须走文件上传 workflow 和 `shareone_upload.js`。不要因为会话里存在旧的 `/s/<share_id>` 就改走文本页面 PUT；二进制文件内容上传不能使用 `upload_page.js`。
 
-- 如果有 `share_id`，接下来执行**更新 (PUT)**。
-- 如果没有，执行**首次创建 (POST)**。
+如果你在当前会话中已经为同一个文本/HTML 文件生成过 ShareOne 链接，可复用之前的 `share_id` 执行文本页面 PUT 更新；否则执行首次创建。
 
-## 4. 获取与处理页面评论 (Comments) - 闭环工作流
+## 不要遗漏的全局约束
 
-ShareOne 页面支持访客划词评论，并提供了完整的**状态机**让 AI Agent 对每条评论给出明确的「认领 → 处理 → 回复 → 关闭」反馈。每条评论拥有 `status` 字段：`open` / `in_progress` / `resolved` / `dismissed`，以及 `author_role`：`visitor` / `owner` / `agent`。
-
-### 4.1 查看评论（仅查看，不动手）
-
-如果用户只是说"帮我看看这个页面的评论"，调用：
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments?status=unresolved"
-```
-
-- `status` 可选值：`all` / `open` / `in_progress` / `resolved` / `dismissed` / `unresolved`（= open + in_progress）。
-- **⚠️ 重要：** 只展示评论内容，**绝对不要自作主张地开始改源文件**，等用户给下一步指令。
-- **⚠️ 评论与回复的整体理解：** 评论数据中可能包含 `replies`（回复）。你**必须**将父评论及其所有回复作为一个**"讨论上下文 (Thread)"**来整体阅读、综合理解最终共识。不要把每条回复当成独立的修改指令。所有回复继承父评论的锚点（`highlighter_data` 和 `quote`）。
-
-如果只想看「现在还有没有未处理的事」，用极轻量的摘要：
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/summary"
-# -> { total, open, in_progress, resolved, dismissed, last_activity_at }
-```
-
-返回 `open == 0` 时无需拉全量。
-
-### 4.2 标准闭环：处理评论（用户明确要求时）
-
-当用户说"帮我处理这些评论"、"根据评论改一下页面"时，**严格按照下面的顺序执行每一条要处理的父评论**（回复不需要单独走流程，只对父评论操作状态）：
-
-#### 步骤 1：认领 — 必须在动手之前做
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-  --method PUT \
-  --data '{"status": "in_progress"}'
-```
-
-访问者立刻在页面侧栏看到「处理中」徽标和顶部的「🤖 AI 正在处理 N 条评论…」横幅。**跳过这一步 = 用户感受不到 AI 在干活。**
-
-#### 步骤 2：取源
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/download"
-```
-
-返回 `{ content, filename, content_type }`。
-
-#### 步骤 3：精准应用修改
-
-- 综合理解**整个 thread（父评论 + 所有 replies）**的最终意图，必要时先和用户确认。
-- **绝对不要用全局 `replace()` / 正则**——会误伤其他同名文案。
-- **基于 DOM 结构精确定位：** 利用 `highlighter_data.startMeta.parentTagName`、`parentIndex`、`textOffset`，结合 `quote`（被选中原文），定位准确节点。
-- **理解结构性意图：** 评论可能是"把这部分挪到底部 / 删掉这个区块 / 加个图标"，先定位再做结构变更。
-- **丢失锚点**：若在当前源文件里无论如何都找不到对应位置，**不要瞎改**，直接走步骤 5 用 `dismissed` + note 告诉用户：「源文件结构已变更，无法定位你这条关于 XXX 的评论」。
-
-#### 步骤 4：重新发布
-
-使用场景 A 的 PUT 流程将改后的文件更新到 ShareOne（保留同一 `share_id`）。
-
-#### 步骤 5：写回复 + 关闭评论 — 必须两步都做
-
-(a) 在该父评论下发一条 **AI 回复**（明确告诉访问者改了什么）：
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments" \
-  --method POST \
-  --data '{"parent_id":"<COMMENT_ID>","quote":"<父评论的 quote>","highlighter_data":"<父评论的 highlighter_data>","content":"已按你的建议把标题改成 ...，并调整了 ...","author_role":"agent"}'
-```
-
-> `author_role: "agent"` 只在 owner 鉴权下生效，访问者会在侧栏看到 🤖 AI 徽标和蓝色背景的回复。
-
-(b) 关闭父评论（不需要单独改 reply 的状态）：
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-  --method PUT \
-  --data '{"status": "resolved", "note": "已采纳，见最新版本"}'
-```
-
-`note` 会作为绿色「🤖 AI 已处理: …」高亮区块显示在评论卡片底部，给访问者一个明确的交代。
-
-#### 对于无法处理 / 无关的评论 — 必须 dismiss，不要无视
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/status" \
-  --method PUT \
-  --data '{"status": "dismissed", "note": "页面中没有此元素，可能指的是另一份分享"}'
-```
-
-### 4.3 兼容旧接口
-
-旧的 `PUT /api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>/resolve` `{resolved: true/false}` 仍然可用（已 deprecated），等价于把 `status` 切到 `resolved` 或 `open`，但**不会**附带 `note`，访问者拿不到 AI 的解释。**新代码请一律用 4.2 的 `/status` 接口**。
-
-### 4.4 关键准则速查
-
-| 准则                                              | 为什么                                           |
-| ------------------------------------------------- | ------------------------------------------------ |
-| 动手前先 `in_progress`                            | 让访问者看到「AI 在干活」                        |
-| 改完一定要 `POST` 一条 `author_role=agent` 的回复 | 闭环的"答复"部分，没有它就只是状态变化、不是对话 |
-| `resolution_note` 要写人话                        | "已把按钮改成主色" 比 "Applied." 有用            |
-| 不能处理就 `dismissed` + note                     | 不要让评论永远卡在 `open`                        |
-| 只对父评论改状态，回复不单独操作                  | 状态语义属于 thread 整体                         |
-| `unresolved` = `open + in_progress`               | 拉单子默认用 `?status=unresolved`                |
-
-### 5. 构造请求并执行发布 (Execute Request)
-
-根据文件类型和操作类型构造请求。提取用户可能要求的密码 (`password`) 和水印 (`watermark`)。为了最大兼容性，推荐使用 Node.js 脚本发起 HTTP 请求。
-
-#### 场景 A：文本、代码或纯 HTML 文件 (`.html`, `.md`, `.txt`)
-
-> **⚠️ 警告 (CRITICAL):**
-> 绝对不要通过这个接口上传任何二进制文件（如 `.ppt`, `.pptx`, `.doc`, `.docx`, `.pdf`, `.zip`, `.png` 等），否则服务器会返回 `400 Bad Request` 错误（提示检测到二进制内容）。如果你看到此类错误，请立即更换为 **场景 B** 的 `/api/v1/files` 接口重新上传。
-
-接口：`https://shareone.app/api/v1/pages`
-格式：`application/json`
-
-对于提取的对话、大段文字或独立的代码块，请将其包装为一段美观的 HTML（含基础样式）以保证展示效果：
-
-**如果是首次创建 (POST):**
-
-执行本技能目录下的 `upload_page.js` 脚本。Sudoclaw 环境不要传 `--api-key`；非 Sudoclaw direct 模式可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
-
-```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
-```
-
-> **注意**：只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等字眼时，才加上 `--allow-comments true` 参数。默认是不开启评论的。
-
-**如果是更新已有链接 (PUT):**
-
-执行本技能目录下的 `upload_page.js` 脚本，并传入 `--share-id` 参数。Sudoclaw 环境不要传 `--api-key`。
-
-```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true/false]
-```
-
-> **注意**：如果用户要求**关闭评论协同**或**开启评论协同**，你可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。如果用户要求修改或清除密码/水印，也可以在 PUT 更新时传入 `--password` 或 `--watermark`；传空字符串 `""` 表示清除对应设置。
-
-#### 场景 B：二进制文件 (PDF, PPTX, Word 等)
-
-由于二进制文件可能较大，ShareOne 采用直传云存储（支持 S3 或 Azure）的方式。请直接调用本技能目录下的 `shareone_upload.js` 脚本进行上传（脚本会自动根据服务端返回的 `upload_type` 字段判断是走 S3 表单上传还是 Azure 的 PUT 直传）：
-
-**如果是首次创建 (POST):**
-
-```bash
-node scripts/shareone_upload.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
-```
-
-**如果是更新已有链接的密码或水印 (PUT):**
-
-对于已经上传的二进制文件，如果用户要求修改密码或水印，请调用通用鉴权请求脚本：
-
-```bash
-node scripts/shareone_api_request.js "/api/v1/files/<YOUR_SHARE_ID>" \
-  --method PUT \
-  --data '{"password": "NEW_PASSWORD", "watermark": "NEW_WATERMARK"}'
-```
-
-_(注意：传空字符串 `""` 表示取消密码或水印)_
-
-## 5. 异常处理与结果反馈 (Feedback)
-
-解析接口返回的 JSON。
-
-- **发布成功 (HTTP 200/201)**:
-  - **获取分享链接**:
-    - 接口和脚本的返回结果中已经包含了完整的 `share_url` 字段（例如 `https://shareone.app/s/<share_id>`）。
-    - 你**必须直接使用**接口或脚本返回的 `share_url` 展示给用户，**不要**自己尝试拼接链接。
-  - 如果设置了密码，务必在回复中加粗显示密码：
-    > 🎉 **发布成功！**
-    > 🔗 链接: <返回的 share_url>
-    > 🔑 提取码: **<密码>**
-  - **功能提示 (Feature Discovery)**: 在**本次会话首次**向用户展示生成的短链接时，请主动（但简短且友好地）提示他们支持未使用的功能，以便用户了解更多高级特性。**后续发布不再提示。**
-    - 如果用户**未使用密码和水印**，提示：
-      > “💡 提示：您也可以让我为分享链接‘加上访问密码’或‘添加自定义水印’，以更好地保护您的内容。”
-    - 如果用户**使用了密码但未使用水印**，提示：
-      > “💡 提示：除了密码，您也可以让我为内容‘添加自定义水印’。”
-    - 如果用户**使用了水印但未使用密码**，提示：
-      > “💡 提示：除了水印，您也可以让我为分享链接‘加上访问密码’。”
-    - 如果用户**同时使用了密码和水印**，则**不进行任何提示**。
-- **内容违规拦截 (HTTP 400)**: 提取 JSON 中的 `detail` 字段展示给用户，如："❌ 发布失败，内容未通过安全审核。原因：<detail>"
-- **API Key 无效 (HTTP 401)**: 提示用户 "API Key 无效或权限不足"。
-- **找不到页面 (HTTP 404)**: 若 PUT 更新遇 404，说明原页面已被后台删除，请询问用户是否作为新页面重新 POST。
+- 发布前必须完成凭据检查和必要的凭据配置。
+- 每次发布前都必须展示以下安全提示，并等待用户明确回复“同意”或 `agree` 后才能继续：
+  > 发布前安全提示：在将页面发布到公网前，请您确认该页面内容符合相关法律法规要求。禁止发布反动、涉政、暴力、色情、侵权或恶意代码。上传的内容将免费托管保留 90 天。
+  > 如果您的内容符合要求，请回复“同意”，我将为您发布。
+- 发布成功后必须直接使用接口或脚本返回的 `share_url`，不要自行拼接分享链接。
+- 如果用户要求开启评论、允许讨论或协同模式，才添加 `--allow-comments true`。默认不开启评论。
+- 评论处理必须形成闭环：认领、修改、重新发布、回复、关闭或 dismiss。
