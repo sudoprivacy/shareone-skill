@@ -11,6 +11,7 @@ let method = 'GET';
 let apiPath = null;
 let data = null;
 let apiKey = null;
+let publicRequest = false;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--method') {
@@ -19,23 +20,25 @@ for (let i = 0; i < args.length; i++) {
         data = args[++i];
     } else if (args[i] === '--api-key') {
         apiKey = args[++i];
+    } else if (args[i] === '--public') {
+        publicRequest = true;
     } else if (!args[i].startsWith('--') && !apiPath) {
         apiPath = args[i];
     }
 }
 
 if (!apiPath) {
-    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>'] [--api-key <key>]");
+    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>'] [--api-key <key>] [--public]");
     process.exit(1);
 }
 
-if (isSudowork() && apiKey) {
+if (isSudowork() && apiKey && !publicRequest) {
     console.error("ERROR:SUDOWORK_MANAGED_KEY");
     console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
     process.exit(1);
 }
 
-if (!isSudowork() && !resolveDirectApiKey(apiKey)) {
+if (!publicRequest && !isSudowork() && !resolveDirectApiKey(apiKey)) {
     console.error("ERROR:KEY_NOT_FOUND");
     process.exit(1);
 }
@@ -51,11 +54,12 @@ if (data !== null) {
 requestShareOneBuffer(apiPath, {
     method,
     apiKey,
+    authRequired: !publicRequest,
     headers,
 }, body).then((res) => {
-    if (res.text) console.log(res.text);
+    process.stdout.write(res.data);
 }).catch((error) => {
-    if (isSudowork() && (error.statusCode === 401 || error.statusCode === 502)) {
+    if (!publicRequest && isSudowork() && (error.statusCode === 401 || error.statusCode === 502)) {
         console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
         console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
     } else {

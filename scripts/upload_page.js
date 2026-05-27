@@ -95,18 +95,11 @@ async function verifyUpdatedContent(updatedShareId, expectedContent) {
         method: 'GET',
         apiKey,
         headers: {
-            Accept: 'application/json',
+            Accept: '*/*',
         },
     });
 
-    let data;
-    try {
-        data = JSON.parse(res.text);
-    } catch (_) {
-        throw new Error('UPDATE_VERIFY_FAILED: download check returned invalid JSON');
-    }
-
-    if (!data || data.content !== expectedContent) {
+    if (res.data.toString('utf8') !== expectedContent) {
         throw new Error('UPDATE_VERIFY_FAILED: server accepted the update but source content did not match the uploaded file');
     }
 }

@@ -165,7 +165,7 @@ function buildShareOneRequest(apiPath, options = {}) {
     const targetUrl = appendPath(getBaseUrl(), apiPath);
     const headers = { ...(options.headers || {}) };
 
-    if (isSudowork()) {
+    if (isSudowork() && options.authRequired !== false) {
         delete headers['X-API-Key'];
         delete headers['x-api-key'];
         return {

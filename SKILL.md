@@ -72,11 +72,11 @@ node scripts/check_api_key.js
 
 ## ShareOne 链接与 share_id
 
-当用户提供 ShareOne 链接时，从 `https://shareone.app/s/<share_id>` 中提取 `<share_id>`。
+当用户提供 ShareOne 链接时，可以从完整链接、`/s/<share_id>` 路径、`share_id` 或自定义短链 slug 中解析目标。下载任意用户允许下载的链接时，优先使用公开下载接口并把原始输入作为 `ref`。
 
 `/s/<share_id>` 是最终给用户访问的分享链接，不是上传 API endpoint。不要把 `/s/<share_id>` 当作发布地址，也不要直接向 `/s/<share_id>` PUT/POST 文件。
 
-`share_id` 可用于查看评论、处理评论、下载源文件、文本页面 PUT 更新，以及已上传二进制文件的密码/水印更新。
+`share_id` 可用于查看评论、处理评论、owner 下载源文件、文本页面 PUT 更新，以及已上传二进制文件的密码/水印更新。非 owner 下载必须要求链接已开启允许下载；若接口返回 `DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
 
 如果目标是 `.pptx`、`.ppt`、`.pdf`、Word、图片、zip 等二进制文件，“发布这个文件”默认必须走文件上传 workflow 和 `shareone_upload.js`。不要因为会话里存在旧的 `/s/<share_id>` 就改走文本页面 PUT；二进制文件内容上传不能使用 `upload_page.js`。
 
