@@ -13,7 +13,7 @@
 - 使用用户指定的文件。
 - 如果用户没有指定文件，根据上下文寻找最近一次生成或编辑的文件。
 - 如果文件不存在，停止并告知用户。
-- 提取用户可能要求的密码 (`password`) 和水印 (`watermark`)。
+- 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。只有用户明确说“链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才设置 slug。
 
 ## 2. 发布前安全确认
 
@@ -30,13 +30,14 @@
 执行：
 
 ```bash
-node scripts/shareone_upload.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"]
+node scripts/shareone_upload.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"]
 ```
 
 规则：
 
 - Sudowork 环境不要传 `--api-key`。
 - 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
+- 如果服务端返回 `custom_slug_warning`，说明文件链接已生成但自定义短链接未生效。必须把提示展示给用户，并请用户提供新的 slug 或之后到管理页修改。
 
 ## 4. 更新已上传二进制链接的密码或水印
 

@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.1.4
+version: 1.1.5
 description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
@@ -18,6 +18,7 @@ description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOn
 - "Upload this presentation to ShareOne and protect it with password 'secret'"
 - "发布这个 PDF 到 ShareOne，并加上密码 1234"
 - "把这个网页发布到 ShareOne，加上水印 '内部绝密'"
+- "把这个网页发布到 ShareOne，链接叫 product-demo"
 - "发布这份设计稿并开启协同评论模式"
 - "用 shareone 分享上一轮对话"
 - "把我刚才写的代码/大段文字分享出去"
@@ -89,4 +90,5 @@ node scripts/check_api_key.js
   > 如果您的内容符合要求，请回复“同意”，我将为您发布。
 - 发布成功后必须直接使用接口或脚本返回的 `share_url`，不要自行拼接分享链接；如果返回中包含 `backend_url`，必须同时作为“备用链接”展示给用户。
 - 如果用户要求开启评论、允许讨论或协同模式，才添加 `--allow-comments true`。默认不开启评论。
+- 如果用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”，发布命令添加 `--slug xxx`。不要在用户未明确要求时自动生成 slug；slug 冲突时把服务端提示反馈给用户，不要静默改名。
 - 评论处理必须形成闭环：认领、修改、重新发布、回复、关闭或 dismiss。

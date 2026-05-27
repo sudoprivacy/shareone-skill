@@ -81,6 +81,7 @@ async function uploadMultipartFallback(filePath, filename, contentType, options)
     const fields = {};
     if (options.password) fields.password = options.password;
     if (options.watermark) fields.watermark = options.watermark;
+    if (options.slug) fields.custom_slug = options.slug;
     const { body, boundary } = buildMultipartBody(fields, filePath, filename, contentType);
     const res = await requestShareOneBuffer('/api/v1/files', {
         method: 'POST',
@@ -124,7 +125,8 @@ async function uploadFile(filePath, options) {
             apiKey: options.apiKey,
         }, {
             filename: filename,
-            content_type: contentType
+            content_type: contentType,
+            custom_slug: options.slug || undefined
         });
 
         if (credential.upload_type === 'azure') {
@@ -140,6 +142,7 @@ async function uploadFile(filePath, options) {
         };
         if (options.password) confirmPayload.password = options.password;
         if (options.watermark) confirmPayload.watermark = options.watermark;
+        if (options.slug) confirmPayload.custom_slug = options.slug;
 
         const finalRes = await requestShareOneJson('/api/v1/files/confirm', {
             method: 'POST',
@@ -166,6 +169,7 @@ const options = {
     contentType: null,
     password: null,
     watermark: null,
+    slug: null,
 };
 
 for (let i = 0; i < args.length; i++) {
@@ -181,13 +185,15 @@ for (let i = 0; i < args.length; i++) {
         options.password = args[++i];
     } else if (args[i] === '--watermark') {
         options.watermark = args[++i];
+    } else if (args[i] === '--slug') {
+        options.slug = args[++i];
     } else if (!args[i].startsWith('--')) {
         filePath = args[i];
     }
 }
 
 if (!filePath) {
-    console.error("Usage: node shareone_upload.js <file_path> [--api-key <api_key>] [--base-url <base_url>] [--filename <name>] [--content-type <mime>] [--password <password>] [--watermark <watermark>]");
+    console.error("Usage: node shareone_upload.js <file_path> [--api-key <api_key>] [--base-url <base_url>] [--filename <name>] [--content-type <mime>] [--password <password>] [--watermark <watermark>] [--slug <slug>]");
     process.exit(1);
 }
 

@@ -15,7 +15,7 @@
 - 如果用户没有指定文件：根据上下文寻找最近一次生成或编辑的文本/HTML 文件，例如 `.html`、`.md`、`.txt`，或将对话/代码包装成 `.html`。
 - 如果锁定的文件不存在，停止并告知用户。
 - 如果锁定的文件是 `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、图片、zip 或其他二进制文件，停止本 workflow，改读 `publish-binary-file.md`。
-- 提取用户可能要求的密码 (`password`) 和水印 (`watermark`)。
+- 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。只有用户明确说“链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才设置 slug。
 
 ## 2. 发布前安全确认
 
@@ -45,7 +45,7 @@
 执行：
 
 ```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true]
 ```
 
 规则：
@@ -54,13 +54,14 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--pa
 - 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
 - 只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等时，才加 `--allow-comments true`。
 - 默认不开启评论。
+- 只有当用户明确要求自定义短链接时，才加 `--slug`；不要根据标题自动生成。
 
 ## 6. 更新已有链接 (PUT)
 
 执行：
 
 ```bash
-node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--allow-comments true/false]
+node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true/false]
 ```
 
 规则：
@@ -68,6 +69,7 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --sha
 - Sudowork 环境不要传 `--api-key`。
 - 如果用户要求关闭评论协同或开启评论协同，可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
 - 如果用户要求修改或清除密码/水印，可以传入 `--password` 或 `--watermark`。
+- 如果用户要求修改自定义短链接，可以传入 `--slug`。
 - 空字符串 `""` 表示清除对应设置。
 
 ## 7. 下一步
