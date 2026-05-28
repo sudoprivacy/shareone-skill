@@ -8,13 +8,34 @@
 
 ## 2. 下载内容
 
-优先调用公开下载接口。该接口只允许下载 owner 已开启 `allow_download` 的链接：
+优先使用下载脚本。脚本会在已配置 ShareOne API Key 时先尝试 owner 下载接口：
 
 ```bash
-node scripts/shareone_api_request.js "/api/v1/public-download?ref=<URL_ENCODED_LINK_OR_ID>" --public > downloaded-file
+node scripts/download_share.js "<LINK_OR_ID>" > downloaded-file
+```
+
+owner 下载接口不受访问密码和 `allow_download` 限制；如果当前 API Key 不是 owner 或没有 API Key，脚本会自动退回公开下载。
+
+如果用户提供了访问密码，必须通过 `--password` 传入，脚本会用 POST body 发送密码，不要把密码拼进 URL：
+
+```bash
+node scripts/download_share.js "<LINK_OR_ID>" --password "<PASSWORD>" > downloaded-file
 ```
 
 返回是原文件内容，不是 JSON。根据响应头里的文件名保存到本地文件，再按用户要求查看、总结或处理。
+
+如果接口返回：
+
+```json
+{
+  "detail": {
+    "code": "PASSWORD_REQUIRED",
+    "message": "This link requires a password before downloading."
+  }
+}
+```
+
+必须明确告诉用户：该 ShareOne 链接需要访问密码，请提供密码后再下载。
 
 如果接口返回结构化错误：
 
@@ -33,4 +54,4 @@ node scripts/shareone_api_request.js "/api/v1/public-download?ref=<URL_ENCODED_L
 
 - 如果用户只是要求下载或查看，展示下载结果摘要，并按返回的文件名和 `content_type` 说明内容类型。
 - 如果用户要求修改下载到的内容，先保存源内容到本地文件，再根据文件类型读取 `publish-text-page.md` 或 `publish-binary-file.md` 执行更新。
-- 公开下载接口不需要 API Key。owner 拉取自己的未开放下载链接时，才使用 `/api/v1/shares/<SHARE_ID>/download` 并携带 API Key。
+- 已配置 API Key 时，脚本会优先尝试 `/api/v1/shares/<SHARE_ID>/download` owner 下载；没有 API Key 或非 owner 时，必须要求链接开启 `allow_download`，密码链接还必须要求用户提供访问密码。
