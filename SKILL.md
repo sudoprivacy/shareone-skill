@@ -1,12 +1,27 @@
 ---
 name: shareone
-version: 1.1.6
+version: 1.1.7
 description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
 # AI Agent 技能：发布到 ShareOne (shareone)
 
 这个 Skill 允许 AI Agent（如 Openclaw 等）将当前生成的历史会话以及 HTML/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接。
+
+## 入口隔离规则
+
+本 skill 和用户本机可能安装的 `shareone` CLI 是两个独立入口。除非用户明确要求“使用 CLI”或指定执行 `shareone ...` 命令，否则不要调用系统 PATH 中的 `shareone` 命令。
+
+使用本 skill 时，所有 ShareOne 操作都必须调用本 skill 目录内的脚本，例如：
+
+```bash
+node scripts/check_api_key.js
+node scripts/upload_page.js <file>
+node scripts/shareone_upload.js <file>
+node scripts/shareone_api_request.js <api_path>
+```
+
+即使 `which shareone` 能找到 CLI，也不要把自然语言的发布、下载、评论处理任务改走 CLI。
 
 ## 使用说明与触发条件
 

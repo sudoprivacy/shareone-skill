@@ -217,6 +217,52 @@ async function requestShareOneJson(apiPath, options = {}, payload = null) {
     return JSON.parse(res.text);
 }
 
+function getErrorDetail(error) {
+    const text = String(error && error.responseText ? error.responseText : '');
+    if (!text) return '';
+    try {
+        const parsed = JSON.parse(text);
+        return String(parsed.detail || parsed.message || text);
+    } catch (_) {
+        return text;
+    }
+}
+
+function isSudoworkMissingKeyError(error) {
+    if (!error) return false;
+    const detail = getErrorDetail(error);
+
+    if (error.statusCode === 502) {
+        return /secret|key|credential|not found|missing|未配置|不存在|缺少/i.test(detail || error.message || '');
+    }
+
+    if (error.statusCode !== 401) return false;
+    return /Missing API Key/i.test(detail);
+}
+
+function isAuthFailedError(error) {
+    if (!error) return false;
+    if (error.statusCode === 401 || error.statusCode === 403) return true;
+    const detail = getErrorDetail(error);
+    return /Invalid API Key|Inactive user|unauthorized|forbidden|权限不足|无效/i.test(detail || error.message || '');
+}
+
+function printShareOneScriptError(error) {
+    if (isSudowork() && isSudoworkMissingKeyError(error)) {
+        console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
+        console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
+        return;
+    }
+
+    if (isAuthFailedError(error)) {
+        console.error("ERROR:AUTH_FAILED");
+        console.error("API Key 无效或权限不足。");
+        return;
+    }
+
+    console.error(`ERROR:${error.message}`);
+}
+
 module.exports = {
     DEFAULT_BASE_URL,
     SUDOWORK_SECRET_KEY,
@@ -228,7 +274,10 @@ module.exports = {
     getCredentialsPath,
     hasSudoworkApiKey,
     isSudowork,
+    isAuthFailedError,
+    isSudoworkMissingKeyError,
     listSudoworkSecrets,
+    printShareOneScriptError,
     readLocalApiKey,
     requestBuffer,
     requestPublicShareOneJson,

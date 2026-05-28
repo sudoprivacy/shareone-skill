@@ -2,6 +2,7 @@
 
 const {
     isSudowork,
+    printShareOneScriptError,
     requestShareOneBuffer,
     resolveDirectApiKey,
 } = require('./shareone_client');
@@ -59,11 +60,6 @@ requestShareOneBuffer(apiPath, {
 }, body).then((res) => {
     process.stdout.write(res.data);
 }).catch((error) => {
-    if (!publicRequest && isSudowork() && (error.statusCode === 401 || error.statusCode === 502)) {
-        console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
-        console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-    } else {
-        console.error(`ERROR:${error.message}`);
-    }
+    printShareOneScriptError(error);
     process.exit(1);
 });

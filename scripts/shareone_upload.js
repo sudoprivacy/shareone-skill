@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const {
     isSudowork,
+    printShareOneScriptError,
     requestBuffer,
     requestShareOneBuffer,
     requestShareOneJson,
@@ -198,11 +199,6 @@ if (!filePath) {
 }
 
 uploadFile(filePath, options).catch((error) => {
-    if (isSudowork() && (error.statusCode === 401 || error.statusCode === 502)) {
-        console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
-        console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-    } else {
-        console.error(`ERROR:${error.message}`);
-    }
+    printShareOneScriptError(error);
     process.exit(1);
 });
