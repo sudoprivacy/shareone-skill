@@ -57,13 +57,13 @@ node scripts/check_api_key.js
 node scripts/create_guest_key.js
 ```
 
-如果输出 `GUEST_KEY_CREATED:<api_key>`，必须回复用户：
+如果输出 `GUEST_KEY_CREATED:<api_key>`，这是阻塞性用户通知。必须先回复用户以下内容，然后才能继续原操作：
 
 > 已为您自动分配临时 API Key：`<api_key>`
-> 绑定链接：https://shareone.app/?key=<api_key>
+> 绑定账号链接：https://shareone.app/?key=<api_key>
 > 请妥善保存此 API Key。为了方便您后续管理分享的链接，请尽快打开上面的链接绑定您的永久账号。
 
-然后继续原操作。Sudowork 环境会把临时 API Key 保存到 Auth Proxy secrets。
+Sudowork 环境会把临时 API Key 保存到 Auth Proxy secrets。即使保存成功，也不能省略上面的用户通知。
 
 如果输出 `ERROR:SUDOWORK_AUTH_PROXY_SAVE_FAILED:<api_key>`，暂停操作并提示：
 
@@ -110,13 +110,13 @@ node scripts/check_api_key.js
 node scripts/create_guest_key.js
 ```
 
-如果输出 `GUEST_KEY_CREATED:<api_key>`，必须回复用户：
+如果输出 `GUEST_KEY_CREATED:<api_key>`，这是阻塞性用户通知。必须先回复用户以下内容，然后才能继续原操作：
 
 > 已为您自动分配临时 API Key：`<api_key>`
-> 绑定链接：https://shareone.app/?key=<api_key>
+> 绑定账号链接：https://shareone.app/?key=<api_key>
 > 请妥善保存此 API Key。为了方便您后续管理分享的链接，请尽快打开上面的链接绑定您的永久账号。
 
-普通 AI Agent 环境会把临时 API Key 保存到本地凭证文件。后续也可以使用环境变量 `SHAREONE_API_KEY` 或命令参数 `--api-key`。
+普通 AI Agent 环境会把临时 API Key 保存到本地凭证文件。即使保存成功，也不能省略上面的用户通知。后续也可以使用环境变量 `SHAREONE_API_KEY` 或命令参数 `--api-key`。
 
 如果输出 `ERROR:RATE_LIMIT_EXCEEDED`，暂停操作并提示：
 
