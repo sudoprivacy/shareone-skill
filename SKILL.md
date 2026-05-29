@@ -75,6 +75,7 @@ node scripts/check_api_key.js
 | --- | --- |
 | `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.zip` 或其他二进制文件 | `workflows/publish-binary-file.md` |
 | `.html`、`.md`、`.txt`、对话内容、大段文本、代码块，或已经包装成 HTML 的内容 | `workflows/publish-text-page.md` |
+| 包含图表、流程图、思维导图、时序图、甘特图等可视化内容的 HTML 页面 | `workflows/publish-text-page.md`（参考其中的 Mermaid.js 章节） |
 
 | 用户意图 | 需要读取的 workflow |
 | --- | --- |
@@ -114,7 +115,7 @@ node scripts/check_api_key.js
   > 如果您的内容符合要求，请回复“同意”，我将为您发布。
 - 发布成功后必须直接使用接口或脚本返回的 `share_url`，不要自行拼接分享链接；如果返回中包含 `backend_url`，必须同时作为“备用链接”展示给用户。
 - 如果用户要求开启评论、允许讨论或协同模式，才添加 `--allow-comments true`。默认不开启评论。
-- 如果用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”，发布命令添加 `--slug xxx`。不要在用户未明确要求时自动生成 slug；slug 冲突时把服务端提示反馈给用户，不要静默改名。
+- 自定义短链接（slug）：服务端会根据文件名自动生成可读的 slug（如 `quarterly-report`），客户端无需额外操作。如果用户明确要求”链接叫 xxx”、”自定义短链接 xxx”、”URL 后缀 xxx”，发布命令添加 `--slug xxx` 覆盖自动生成；slug 冲突时把服务端提示反馈给用户，不要静默改名。
 - 评论处理必须形成闭环：认领、修改、重新发布、回复、关闭或 dismiss。
 
 ## 最终回复前检查清单

@@ -15,7 +15,7 @@
 - 如果用户没有指定文件：根据上下文寻找最近一次生成或编辑的文本/HTML 文件，例如 `.html`、`.md`、`.txt`，或将对话/代码包装成 `.html`。
 - 如果锁定的文件不存在，停止并告知用户。
 - 如果锁定的文件是 `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、图片、zip 或其他二进制文件，停止本 workflow，改读 `publish-binary-file.md`。
-- 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。只有用户明确说“链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才设置 slug。
+- 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。服务端会根据文件名自动生成可读的 slug，客户端无需主动设置。只有用户明确说”链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才用 `--slug` 覆盖。
 
 ## 2. 发布前安全确认
 
@@ -54,7 +54,7 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--pa
 - 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
 - 只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等时，才加 `--allow-comments true`。
 - 默认不开启评论。
-- 只有当用户明确要求自定义短链接时，才加 `--slug`；不要根据标题自动生成。
+- 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
 
 ## 6. 更新已有链接 (PUT)
 
@@ -72,6 +72,53 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --sha
 - 如果用户要求修改自定义短链接，可以传入 `--slug`。
 - 空字符串 `""` 表示清除对应设置。
 
-## 7. 下一步
+## 7. 使用 Mermaid.js 绘制图表
+
+当 HTML 页面需要包含图表、流程图、时序图、思维导图等可视化内容时，优先使用 Mermaid.js 而非 CSS/字符串拼接的伪图表。Mermaid 渲染的图表响应式更好、更生动。
+
+### 引入方式
+
+在 HTML 的 `<body>` 末尾通过 ESM 模块加载：
+
+```html
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default', look: 'handDrawn' });
+</script>
+```
+
+### 语法
+
+在 HTML 中用 `<pre class="mermaid">` 包裹 Mermaid 语法：
+
+```html
+<pre class="mermaid">
+flowchart LR
+    A[开始] --> B{条件判断}
+    B -->|是| C[执行]
+    B -->|否| D[跳过]
+</pre>
+```
+
+### 支持的图表类型
+
+- `flowchart` — 流程图
+- `sequenceDiagram` — 时序图
+- `classDiagram` — 类图
+- `stateDiagram-v2` — 状态图
+- `erDiagram` — ER 关系图
+- `gantt` — 甘特图
+- `pie` — 饼图
+- `mindmap` — 思维导图
+- `timeline` — 时间线
+
+### 使用原则
+
+- 页面中有图表需求时，默认使用 Mermaid 替代 CSS 手工绘制的伪图表。
+- 一个页面可以包含多个 `<pre class="mermaid">` 块。
+- Mermaid 语法中不要包含 HTML 标签，保持纯文本描述。
+- 如果图表极其复杂且 Mermaid 表达力不够，可以退回到 SVG 或 Canvas 方案。
+
+## 8. 下一步
 
 执行完成后读取 `result-and-errors.md`，按返回 JSON 展示结果或错误。
