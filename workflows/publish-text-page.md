@@ -78,7 +78,13 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --sha
 
 ### 引入方式
 
-在 HTML 的 `<body>` 末尾通过 ESM 模块加载：
+在 HTML 的 `<style>` 中添加防闪烁 CSS，在 `<body>` 末尾通过 ESM 模块加载：
+
+```css
+/* 防止 Mermaid 加载前显示原始语法文本 */
+pre.mermaid { background: none; border: none; text-align: center; padding: 20px 0; visibility: hidden; }
+pre.mermaid[data-processed] { visibility: visible; }
+```
 
 ```html
 <script type="module">
