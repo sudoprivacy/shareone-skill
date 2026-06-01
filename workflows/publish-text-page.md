@@ -58,6 +58,8 @@ node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--pa
 
 ## 6. 更新已有链接 (PUT)
 
+如果用户只要求修改已有链接的水印、访问密码、自定义短链接或评论开关，不要执行本节，不要下载原文件；改读 `update-share-settings.md`，使用 `update_share_settings.js` 只更新元数据。
+
 执行：
 
 ```bash

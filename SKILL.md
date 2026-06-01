@@ -18,6 +18,7 @@ description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOn
 node scripts/check_api_key.js
 node scripts/upload_page.js <file>
 node scripts/shareone_upload.js <file>
+node scripts/update_share_settings.js <share_link_or_id>
 node scripts/shareone_api_request.js <api_path>
 ```
 
@@ -40,6 +41,7 @@ node scripts/shareone_api_request.js <api_path>
 - "Share your last response as a note"
 - "帮我下载这个 ShareOne 链接的文件：https://shareone.app/s/xxx"
 - "拉取一下这个链接的评论：https://shareone.app/s/xxx"
+- "给这个 ShareOne 链接加水印：https://shareone.app/s/xxx"
 - "根据这个链接的评论修改页面：https://shareone.app/s/xxx"
 - "修改这个 ShareOne 链接的内容：https://shareone.app/s/xxx"
 
@@ -69,7 +71,9 @@ node scripts/check_api_key.js
 
 根据用户意图读取对应 workflow：
 
-先按目标文件类型路由，再按用户动作路由。文件类型优先级最高。
+如果用户提供已有 ShareOne 链接、`share_id` 或自定义短链 slug，并且只要求修改水印、访问密码、自定义短链接或评论开关，必须优先读取 `workflows/update-share-settings.md`。这是元数据更新，不要按文件类型路由，不要下载源文件，不要使用 `upload_page.js`，不要重新上传内容。
+
+其他发布任务先按目标文件类型路由，再按用户动作路由。文件类型优先级最高。
 
 | 目标文件/内容类型 | 必须读取的 workflow |
 | --- | --- |
@@ -79,6 +83,7 @@ node scripts/check_api_key.js
 
 | 用户意图 | 需要读取的 workflow |
 | --- | --- |
+| 已有 ShareOne 链接只修改水印、访问密码、自定义短链接或评论开关 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/update-share-settings.md`，最后读 `workflows/result-and-errors.md` |
 | 发布、分享、生成链接、上线、分享上一轮对话、大段文本或代码 | 先读 `workflows/environment-and-credentials.md`，再按文件类型读 `workflows/publish-text-page.md` 或 `workflows/publish-binary-file.md`，最后读 `workflows/result-and-errors.md` |
 | 删除、清除、移除、重置 ShareOne API Key | 读 `workflows/delete-api-key.md` |
 | 下载 ShareOne 链接的文件或源内容 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/download-file.md` |
@@ -92,7 +97,9 @@ node scripts/check_api_key.js
 
 `/s/<share_id>` 是最终给用户访问的分享链接，不是上传 API endpoint。不要把 `/s/<share_id>` 当作发布地址，也不要直接向 `/s/<share_id>` PUT/POST 文件。
 
-`share_id` 可用于查看评论、处理评论、owner 下载源文件、文本页面 PUT 更新，以及已上传二进制文件的密码/水印更新。非 owner 下载必须要求链接已开启允许下载；若接口返回 `DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
+`share_id` 可用于查看评论、处理评论、owner 下载源文件、文本页面内容 PUT 更新，以及已有链接的密码/水印/短链/评论开关元数据更新。非 owner 下载必须要求链接已开启允许下载；若接口返回 `DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
+
+对已有链接只改水印、密码、自定义短链接或评论开关时，使用 `update_share_settings.js`。`/s/<share_id>` 和 `/md/<share_id>` 走页面设置更新；`/pdf/<share_id>`、`/ppt/<share_id>` 和 `/word/<share_id>` 走文件设置更新。裸 `share_id` 或 slug 由脚本先尝试页面 endpoint，必要时回退文件 endpoint。整个过程不要下载源文件。
 
 如果目标是 `.pptx`、`.ppt`、`.pdf`、Word、图片、zip 等二进制文件，“发布这个文件”默认必须走文件上传 workflow 和 `shareone_upload.js`。不要因为会话里存在旧的 `/s/<share_id>` 就改走文本页面 PUT；二进制文件内容上传不能使用 `upload_page.js`。
 
