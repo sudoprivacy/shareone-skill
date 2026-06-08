@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const {
     isSudowork,
     printShareOneScriptError,
@@ -9,7 +10,7 @@ const {
 const args = process.argv.slice(2);
 let filePath = null;
 let apiKey = null;
-let filename = "shared_content.html";
+let filename = null;
 let password = null;
 let watermark = null;
 let shareId = null;
@@ -39,6 +40,10 @@ for (let i = 0; i < args.length; i++) {
 if (!filePath) {
     console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>]");
     process.exit(1);
+}
+
+if (!filename) {
+    filename = path.basename(filePath);
 }
 
 if (isSudowork() && apiKey) {

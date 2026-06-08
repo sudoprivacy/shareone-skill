@@ -1,12 +1,12 @@
 ---
 name: shareone
 version: 1.1.8
-description: 发布本地生成的 HTML 网页、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
+description: 发布本地生成的 HTML、Markdown、TXT、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
 # AI Agent 技能：发布到 ShareOne (shareone)
 
-这个 Skill 允许 AI Agent（如 Openclaw 等）将当前生成的历史会话以及 HTML/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接。
+这个 Skill 允许 AI Agent（如 Openclaw 等）将当前生成的历史会话以及 HTML/Markdown/TXT/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接。
 
 ## 入口隔离规则
 
