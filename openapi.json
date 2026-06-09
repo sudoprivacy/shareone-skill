@@ -1,0 +1,450 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ShareOne No-Install Agent API",
+    "version": "1.0.0",
+    "description": "HTTP API surface for generic AI agents using ShareOne without an installed package."
+  },
+  "servers": [
+    {
+      "url": "https://shareone.app"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "GuestKeyResponse": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "string"
+          }
+        },
+        "required": ["api_key"]
+      },
+      "PageCreate": {
+        "type": "object",
+        "properties": {
+          "filename": { "type": "string" },
+          "html_content": { "type": "string" },
+          "password": { "type": "string" },
+          "watermark": { "type": "string" },
+          "custom_slug": { "type": "string" },
+          "allow_comments": { "type": "boolean" },
+          "allow_download": { "type": "boolean" }
+        },
+        "required": ["filename", "html_content"]
+      },
+      "PageUpdate": {
+        "type": "object",
+        "properties": {
+          "filename": { "type": "string" },
+          "html_content": { "type": "string" },
+          "password": { "type": "string" },
+          "watermark": { "type": "string" },
+          "custom_slug": { "type": "string" },
+          "allow_comments": { "type": "boolean" },
+          "allow_download": { "type": "boolean" }
+        }
+      },
+      "FileUpdate": {
+        "type": "object",
+        "properties": {
+          "filename": { "type": "string" },
+          "password": { "type": "string" },
+          "watermark": { "type": "string" },
+          "custom_slug": { "type": "string" },
+          "allow_comments": { "type": "boolean" },
+          "allow_download": { "type": "boolean" }
+        }
+      },
+      "PageResponse": {
+        "type": "object",
+        "properties": {
+          "share_id": { "type": "string" },
+          "custom_slug": { "type": ["string", "null"] },
+          "share_url": { "type": "string" },
+          "canonical_url": { "type": ["string", "null"] },
+          "backend_url": { "type": ["string", "null"] },
+          "custom_slug_warning": { "type": ["string", "null"] },
+          "custom_slug_suggestions": {
+            "type": ["array", "null"],
+            "items": { "type": "string" }
+          },
+          "filename": { "type": "string" },
+          "allow_download": { "type": "boolean" }
+        },
+        "required": ["share_id", "share_url", "filename"]
+      },
+      "UploadCredentialRequest": {
+        "type": "object",
+        "properties": {
+          "filename": { "type": "string" },
+          "content_type": { "type": "string" },
+          "custom_slug": { "type": "string" }
+        },
+        "required": ["filename"]
+      },
+      "UploadCredentialResponse": {
+        "type": "object",
+        "properties": {
+          "share_id": { "type": "string" },
+          "upload_url": { "type": "string" },
+          "upload_fields": { "type": "object" },
+          "filename": { "type": "string" },
+          "upload_type": { "type": "string", "enum": ["s3", "azure"] }
+        },
+        "required": ["share_id", "upload_url", "upload_fields", "filename"]
+      },
+      "UploadConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "share_id": { "type": "string" },
+          "filename": { "type": "string" },
+          "content_type": { "type": "string" },
+          "password": { "type": "string" },
+          "watermark": { "type": "string" },
+          "custom_slug": { "type": "string" }
+        },
+        "required": ["share_id", "filename"]
+      },
+      "PublicDownloadRequest": {
+        "type": "object",
+        "properties": {
+          "ref": { "type": "string" },
+          "password": { "type": "string" }
+        },
+        "required": ["ref"]
+      },
+      "CommentCreate": {
+        "type": "object",
+        "properties": {
+          "quote": { "type": "string" },
+          "highlighter_data": { "type": "string" },
+          "content": { "type": "string" },
+          "parent_id": { "type": "string" },
+          "author_role": { "type": "string", "enum": ["agent", "owner", "visitor"] }
+        },
+        "required": ["quote", "highlighter_data", "content"]
+      },
+      "CommentStatusUpdate": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "resolved", "dismissed"]
+          },
+          "note": { "type": "string" }
+        },
+        "required": ["status"]
+      },
+      "CommentSummary": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "open": { "type": "integer" },
+          "in_progress": { "type": "integer" },
+          "resolved": { "type": "integer" },
+          "dismissed": { "type": "integer" },
+          "last_activity_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/agent-guest-key": {
+      "post": {
+        "summary": "Create a temporary API key",
+        "responses": {
+          "200": {
+            "description": "Temporary API key",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuestKeyResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages": {
+      "post": {
+        "summary": "Publish an HTML, Markdown, or text page",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PageCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Published page",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{share_id}": {
+      "put": {
+        "summary": "Update a page or page metadata",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PageUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated page",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/credential": {
+      "post": {
+        "summary": "Request a direct upload credential for a binary file",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UploadCredentialRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload credential",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadCredentialResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/confirm": {
+      "post": {
+        "summary": "Confirm a direct binary upload",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UploadConfirmRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Published file",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files": {
+      "post": {
+        "summary": "Fallback multipart upload for a binary file",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "password": { "type": "string" },
+                  "watermark": { "type": "string" },
+                  "custom_slug": { "type": "string" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Published file",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{share_id}": {
+      "put": {
+        "summary": "Update file metadata",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FileUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated file",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shares/{share_id}/download": {
+      "get": {
+        "summary": "Download owner source content",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Original file bytes" }
+        }
+      }
+    },
+    "/api/v1/public-download": {
+      "get": {
+        "summary": "Download public source content when downloads are enabled",
+        "parameters": [
+          { "name": "ref", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Original file bytes" }
+        }
+      },
+      "post": {
+        "summary": "Download password-protected public source content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PublicDownloadRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Original file bytes" }
+        }
+      }
+    },
+    "/api/v1/shares/{share_id}/comments": {
+      "get": {
+        "summary": "List comments",
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["all", "open", "in_progress", "resolved", "dismissed", "unresolved"]
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Comment list" }
+        }
+      },
+      "post": {
+        "summary": "Create a comment or agent reply",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CommentCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created comment or reply" }
+        }
+      }
+    },
+    "/api/v1/shares/{share_id}/comments/summary": {
+      "get": {
+        "summary": "Get comment summary counts",
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment summary",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommentSummary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shares/{share_id}/comments/{comment_id}/status": {
+      "put": {
+        "summary": "Update comment status",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "share_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "comment_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CommentStatusUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated comment status" }
+        }
+      }
+    }
+  }
+}
