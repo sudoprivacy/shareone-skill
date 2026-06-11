@@ -63,7 +63,7 @@ node scripts/create_guest_key.js
 
 如果同时输出 `SUDOWORK_FALLBACK_KEY_SAVED`，补充说明：
 
-> 我检测到 Sudowork Auth Proxy/secrets 当前不可用或保存失败，已暂时保存到 ShareOne 本地 fallback 凭证。该凭证不是 Sudowork Secret Store；如果真实 home 不可写，可能只在当前会话内有效。
+> 我检测到 Sudowork Auth Proxy/secrets 当前不可用或保存失败，已暂时保存到 ShareOne 本地 fallback 凭证。该凭证不是 Sudowork Secret Store；保存位置是 ShareOne skill 安装目录下的 `.shareone_credentials`。
 
 如果输出 `ERROR:RATE_LIMIT_EXCEEDED`，暂停操作并提示：
 
@@ -97,16 +97,11 @@ node scripts/create_guest_key.js
 
 如果输出 `GUEST_KEY_CREATED:<api_key>`，必须先按第 2 节的临时 API Key 通知回复用户，再继续原操作。
 
-### Sudowork fallback 本地路径
+### 本地凭据路径
 
-Sudowork fallback 会按普通 AI Agent 方式读取 `SHAREONE_API_KEY` 或本地凭证文件。保存本地凭证时，如果当前 home 形如：
+普通 AI Agent 和 Sudowork fallback 都会读取 `SHAREONE_API_KEY` 或本地凭证文件。
 
-- `/Users/name/.nexus/session`
-- `/home/name/.nexus/session`
-- `C:\Users\name\.nexus\session`
-- `C:/Users/name/.nexus/session`
-
-skill 会优先把 `.nexus` 前缀之前的路径当作用户 home，读写 `<用户home>/.shareone_credentials`。如果该路径为空、根目录、不是绝对路径或不可写，则回退当前沙箱 home。该 fallback 不是 Sudowork Secret Store。
+所有非 Sudowork secrets 的本地凭据都只读写 ShareOne skill 安装目录下的 `.shareone_credentials`，不读写用户 home。保存、读取和删除使用同一路径，确保不同 Agent/龙虾产品中路径一致。Sudowork fallback 的本地凭据不是 Sudowork Secret Store。
 
 ## 4. 普通 AI Agent 无 Key
 
@@ -156,6 +151,7 @@ node scripts/create_guest_key.js
 
 ## 5. 后续命令规则
 
+- Sudowork：不要传 `--api-key`。
 - `SUDOWORK_ENV_OK_KEY_FOUND`：不要传 `--api-key`。
 - `SUDOWORK_ENV_UNAVAILABLE_KEY_FOUND:<api_key>`、`KEY_FOUND:<api_key>`：可以传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
 - 如果凭据无效或服务返回 401，在结果处理 workflow 中提示 “API Key 无效或权限不足”。

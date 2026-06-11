@@ -1,6 +1,5 @@
 const http = require('http');
 const https = require('https');
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
@@ -26,56 +25,21 @@ function getBaseUrl() {
     return process.env.SHAREONE_BASE_URL || DEFAULT_BASE_URL;
 }
 
-function isAbsolutePathLike(value) {
-    const raw = String(value || '');
-    return raw.startsWith('/') || raw.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(raw);
-}
-
-function isRootPathLike(value) {
-    const raw = String(value || '').replace(/[\\/]+$/, '');
-    return raw === '' || raw === '/' || raw === '\\' || /^[A-Za-z]:$/.test(raw);
-}
-
-function deriveHomeBeforeNexus(homePath) {
-    const raw = String(homePath || '').trim();
-    if (!raw) return null;
-
-    const match = /(^|[\\/])\.nexus(?=([\\/]|$))/.exec(raw);
-    if (!match) return null;
-
-    const derived = raw.slice(0, match.index);
-    if (!derived || !isAbsolutePathLike(derived) || isRootPathLike(derived)) return null;
-    return derived;
-}
-
-function getDefaultHomeDir() {
-    return os.homedir();
-}
-
-function getCredentialHomeCandidates() {
-    const defaultHome = getDefaultHomeDir();
-    const candidates = [];
-
-    if (isSudowork()) {
-        const derivedHome = deriveHomeBeforeNexus(defaultHome);
-        if (derivedHome) candidates.push(derivedHome);
-    }
-
-    candidates.push(defaultHome);
-    return [...new Set(candidates.filter(Boolean))];
-}
-
-function credentialPathForHome(homeDir) {
-    const separator = String(homeDir).includes('\\') && !String(homeDir).includes('/') ? '\\' : path.sep;
-    return `${String(homeDir).replace(/[\\/]+$/, '')}${separator}${CREDENTIALS_FILENAME}`;
+function getSkillCredentialsPath() {
+    return path.join(path.resolve(__dirname, '..'), CREDENTIALS_FILENAME);
 }
 
 function getCredentialPathCandidates() {
-    return getCredentialHomeCandidates().map(credentialPathForHome);
+    return [getSkillCredentialsPath()];
 }
 
 function canWriteCredentialsPath(credentialsPath) {
     try {
+        if (fs.existsSync(credentialsPath)) {
+            fs.accessSync(credentialsPath, fs.constants.W_OK);
+            return true;
+        }
+
         const raw = String(credentialsPath);
         const lastSlash = Math.max(raw.lastIndexOf('/'), raw.lastIndexOf('\\'));
         const parent = lastSlash > 0 ? raw.slice(0, lastSlash) : path.dirname(raw);
@@ -87,7 +51,7 @@ function canWriteCredentialsPath(credentialsPath) {
 }
 
 function getCredentialsPath() {
-    return getCredentialPathCandidates()[0] || credentialPathForHome(getDefaultHomeDir());
+    return getSkillCredentialsPath();
 }
 
 function readLocalApiKey() {
@@ -117,9 +81,13 @@ function saveLocalApiKey(apiKey) {
 function deleteLocalApiKey() {
     let deleted = false;
     for (const credentialsPath of getCredentialPathCandidates()) {
-        if (!fs.existsSync(credentialsPath)) continue;
-        fs.unlinkSync(credentialsPath);
-        deleted = true;
+        try {
+            if (!fs.existsSync(credentialsPath)) continue;
+            fs.unlinkSync(credentialsPath);
+            deleted = true;
+        } catch (_) {
+            // Try deleting the next candidate.
+        }
     }
     return deleted;
 }
@@ -395,13 +363,13 @@ module.exports = {
     SUDOWORK_SECRET_KEY,
     SUDOWORK_SECRET_NAMESPACE,
     appendPath,
-    deriveHomeBeforeNexus,
     deleteLocalApiKey,
     deleteSudoworkApiKey,
     detectCredentialMode,
     getBaseUrl,
     getCredentialPathCandidates,
     getCredentialsPath,
+    getSkillCredentialsPath,
     hasSudoworkApiKey,
     isSudowork,
     isAuthFailedError,

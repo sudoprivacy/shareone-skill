@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.1.9
+version: 1.2.0
 description: 发布本地生成的 HTML、Markdown、TXT、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
@@ -67,9 +67,9 @@ node scripts/check_api_key.js
 术语固定：
 
 - Sudowork：发布、评论、通用请求命令不要传 `--api-key`，凭证由 Auth Proxy secrets 注入。
-- Sudowork fallback：如果检测到 Sudowork 但 Auth Proxy/secrets 接口不可用，后续按普通 AI Agent 方式直连 ShareOne；此时可以使用环境变量 `SHAREONE_API_KEY` 或本地凭证文件。
-- 普通 AI Agent：可以使用 `--api-key`、环境变量 `SHAREONE_API_KEY` 或本地凭证文件。
-- Sudowork fallback 的本地凭证路径：如果当前 home 形如 `/Users/name/.nexus/session`、`/home/name/.nexus/session` 或 `C:\Users\name\.nexus\session`，skill 会优先把 `.nexus` 前缀之前的路径当作用户 home 读写 `.shareone_credentials`；如果该路径不可写，则回退当前沙箱 home。该机制不是 Sudowork Secret Store。
+- Sudowork fallback：如果检测到 Sudowork 但 Auth Proxy/secrets 接口不可用，后续按普通 AI Agent 方式直连 ShareOne；此时可以使用环境变量 `SHAREONE_API_KEY` 或 ShareOne skill 安装目录下的本地凭证文件。
+- 普通 AI Agent：可以使用 `--api-key`、环境变量 `SHAREONE_API_KEY` 或 ShareOne skill 安装目录下的本地凭证文件。
+- 本地凭据路径：所有非 Sudowork secrets 的本地凭据都只读写 ShareOne skill 安装目录下的 `.shareone_credentials`，不读写用户 home。读取、保存和删除使用同一路径，确保不同 Agent/龙虾产品中路径一致。该本地 fallback 不是 Sudowork Secret Store。
 
 ## 操作路由表
 
