@@ -5,9 +5,14 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_BASE_URL = 'https://shareone.app';
-const CREDENTIALS_PATH = path.join(os.homedir(), '.shareone_credentials');
+const CREDENTIALS_FILENAME = '.shareone_credentials';
 const SUDOWORK_SECRET_NAMESPACE = 'service:shareone';
 const SUDOWORK_SECRET_KEY = 'X-API-Key';
+const CREDENTIAL_MODE_DIRECT = 'direct';
+const CREDENTIAL_MODE_SUDOWORK_PROXY = 'sudowork_proxy';
+const CREDENTIAL_MODE_DIRECT_FALLBACK = 'direct_fallback';
+
+let credentialModePromise = null;
 
 function isSudowork() {
     return Boolean(process.env.SUDOWORK_AUTH_PROXY_URL && process.env.SUDOWORK_AUTH_PROXY_TOKEN);
@@ -21,18 +26,81 @@ function getBaseUrl() {
     return process.env.SHAREONE_BASE_URL || DEFAULT_BASE_URL;
 }
 
+function isAbsolutePathLike(value) {
+    const raw = String(value || '');
+    return raw.startsWith('/') || raw.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(raw);
+}
+
+function isRootPathLike(value) {
+    const raw = String(value || '').replace(/[\\/]+$/, '');
+    return raw === '' || raw === '/' || raw === '\\' || /^[A-Za-z]:$/.test(raw);
+}
+
+function deriveHomeBeforeNexus(homePath) {
+    const raw = String(homePath || '').trim();
+    if (!raw) return null;
+
+    const match = /(^|[\\/])\.nexus(?=([\\/]|$))/.exec(raw);
+    if (!match) return null;
+
+    const derived = raw.slice(0, match.index);
+    if (!derived || !isAbsolutePathLike(derived) || isRootPathLike(derived)) return null;
+    return derived;
+}
+
+function getDefaultHomeDir() {
+    return os.homedir();
+}
+
+function getCredentialHomeCandidates() {
+    const defaultHome = getDefaultHomeDir();
+    const candidates = [];
+
+    if (isSudowork()) {
+        const derivedHome = deriveHomeBeforeNexus(defaultHome);
+        if (derivedHome) candidates.push(derivedHome);
+    }
+
+    candidates.push(defaultHome);
+    return [...new Set(candidates.filter(Boolean))];
+}
+
+function credentialPathForHome(homeDir) {
+    const separator = String(homeDir).includes('\\') && !String(homeDir).includes('/') ? '\\' : path.sep;
+    return `${String(homeDir).replace(/[\\/]+$/, '')}${separator}${CREDENTIALS_FILENAME}`;
+}
+
+function getCredentialPathCandidates() {
+    return getCredentialHomeCandidates().map(credentialPathForHome);
+}
+
+function canWriteCredentialsPath(credentialsPath) {
+    try {
+        const raw = String(credentialsPath);
+        const lastSlash = Math.max(raw.lastIndexOf('/'), raw.lastIndexOf('\\'));
+        const parent = lastSlash > 0 ? raw.slice(0, lastSlash) : path.dirname(raw);
+        fs.accessSync(parent, fs.constants.W_OK);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
 function getCredentialsPath() {
-    return CREDENTIALS_PATH;
+    return getCredentialPathCandidates()[0] || credentialPathForHome(getDefaultHomeDir());
 }
 
 function readLocalApiKey() {
-    if (!fs.existsSync(CREDENTIALS_PATH)) return null;
-    try {
-        const data = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
-        return data && data.api_key ? data.api_key : null;
-    } catch (_) {
-        return null;
+    for (const credentialsPath of getCredentialPathCandidates()) {
+        if (!fs.existsSync(credentialsPath)) continue;
+        try {
+            const data = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+            if (data && data.api_key) return data.api_key;
+        } catch (_) {
+            // Try the next candidate.
+        }
     }
+    return null;
 }
 
 function resolveDirectApiKey(explicitApiKey) {
@@ -40,13 +108,20 @@ function resolveDirectApiKey(explicitApiKey) {
 }
 
 function saveLocalApiKey(apiKey) {
-    fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ api_key: apiKey }));
+    const candidates = getCredentialPathCandidates();
+    const credentialsPath = candidates.find(canWriteCredentialsPath) || candidates[candidates.length - 1] || getCredentialsPath();
+    fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }));
+    return credentialsPath;
 }
 
 function deleteLocalApiKey() {
-    if (!fs.existsSync(CREDENTIALS_PATH)) return false;
-    fs.unlinkSync(CREDENTIALS_PATH);
-    return true;
+    let deleted = false;
+    for (const credentialsPath of getCredentialPathCandidates()) {
+        if (!fs.existsSync(credentialsPath)) continue;
+        fs.unlinkSync(credentialsPath);
+        deleted = true;
+    }
+    return deleted;
 }
 
 function appendPath(baseUrl, apiPath) {
@@ -143,9 +218,57 @@ async function listSudoworkSecrets(namespace = SUDOWORK_SECRET_NAMESPACE) {
     return Array.isArray(result.data) ? result.data : [];
 }
 
-async function hasSudoworkApiKey() {
-    const secrets = await listSudoworkSecrets(SUDOWORK_SECRET_NAMESPACE);
+function hasShareOneSecret(secrets) {
     return secrets.some(secret => secret && secret.namespace === SUDOWORK_SECRET_NAMESPACE && secret.key === SUDOWORK_SECRET_KEY);
+}
+
+async function hasSudoworkApiKey() {
+    const mode = await detectCredentialMode();
+    return mode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && mode.hasSudoworkKey;
+}
+
+async function detectCredentialMode({ refresh = false } = {}) {
+    if (!refresh && credentialModePromise) return credentialModePromise;
+
+    credentialModePromise = (async () => {
+        if (!isSudowork()) {
+            return {
+                mode: CREDENTIAL_MODE_DIRECT,
+                isSudowork: false,
+                sudoworkAvailable: false,
+                hasSudoworkKey: false,
+                secrets: [],
+                error: null,
+            };
+        }
+
+        try {
+            const secrets = await listSudoworkSecrets(SUDOWORK_SECRET_NAMESPACE);
+            return {
+                mode: CREDENTIAL_MODE_SUDOWORK_PROXY,
+                isSudowork: true,
+                sudoworkAvailable: true,
+                hasSudoworkKey: hasShareOneSecret(secrets),
+                secrets,
+                error: null,
+            };
+        } catch (error) {
+            return {
+                mode: CREDENTIAL_MODE_DIRECT_FALLBACK,
+                isSudowork: true,
+                sudoworkAvailable: false,
+                hasSudoworkKey: false,
+                secrets: [],
+                error,
+            };
+        }
+    })();
+
+    return credentialModePromise;
+}
+
+function resetCredentialModeCache() {
+    credentialModePromise = null;
 }
 
 async function saveSudoworkApiKey(apiKey) {
@@ -161,11 +284,12 @@ async function deleteSudoworkApiKey() {
     return requestSudoworkSecrets(pathSuffix, { method: 'DELETE' }, null);
 }
 
-function buildShareOneRequest(apiPath, options = {}) {
+async function buildShareOneRequest(apiPath, options = {}) {
     const targetUrl = appendPath(getBaseUrl(), apiPath);
     const headers = { ...(options.headers || {}) };
+    const credentialMode = await detectCredentialMode();
 
-    if (isSudowork() && options.authRequired !== false) {
+    if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && options.authRequired !== false) {
         delete headers['X-API-Key'];
         delete headers['x-api-key'];
         return {
@@ -200,7 +324,7 @@ function buildShareOneRequest(apiPath, options = {}) {
 }
 
 async function requestShareOneBuffer(apiPath, options = {}, body = null) {
-    const built = buildShareOneRequest(apiPath, options);
+    const built = await buildShareOneRequest(apiPath, options);
     return requestBuffer(built.url, built.options, body);
 }
 
@@ -249,7 +373,7 @@ function isAuthFailedError(error) {
 
 function printShareOneScriptError(error) {
     if (isSudowork() && isSudoworkMissingKeyError(error)) {
-        console.error("ERROR:SUDOWORK_KEY_NOT_FOUND");
+        console.error("ERROR:SUDOWORK_ENV_OK_KEY_NOT_FOUND");
         console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
         return;
     }
@@ -264,13 +388,19 @@ function printShareOneScriptError(error) {
 }
 
 module.exports = {
+    CREDENTIAL_MODE_DIRECT,
+    CREDENTIAL_MODE_DIRECT_FALLBACK,
+    CREDENTIAL_MODE_SUDOWORK_PROXY,
     DEFAULT_BASE_URL,
     SUDOWORK_SECRET_KEY,
     SUDOWORK_SECRET_NAMESPACE,
     appendPath,
+    deriveHomeBeforeNexus,
     deleteLocalApiKey,
     deleteSudoworkApiKey,
+    detectCredentialMode,
     getBaseUrl,
+    getCredentialPathCandidates,
     getCredentialsPath,
     hasSudoworkApiKey,
     isSudowork,
@@ -283,6 +413,7 @@ module.exports = {
     requestPublicShareOneJson,
     requestShareOneBuffer,
     requestShareOneJson,
+    resetCredentialModeCache,
     resolveDirectApiKey,
     saveLocalApiKey,
     saveSudoworkApiKey,

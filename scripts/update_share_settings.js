@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 const {
+    CREDENTIAL_MODE_SUDOWORK_PROXY,
+    detectCredentialMode,
     getBaseUrl,
-    isSudowork,
     printShareOneScriptError,
     requestShareOneBuffer,
     resolveDirectApiKey,
@@ -80,17 +81,6 @@ if (Object.keys(payload).length === 0) {
     process.exit(1);
 }
 
-if (isSudowork() && apiKey && !dryRun) {
-    console.error('ERROR:SUDOWORK_MANAGED_KEY');
-    console.error('Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
-    process.exit(1);
-}
-
-if (!dryRun && !isSudowork() && !resolveDirectApiKey(apiKey)) {
-    console.error('ERROR:KEY_NOT_FOUND');
-    process.exit(1);
-}
-
 function parseRef(input) {
     const raw = String(input || '').trim();
     let path = raw.split('?')[0].split('#')[0];
@@ -154,6 +144,18 @@ async function putSettings(apiPath) {
 }
 
 (async () => {
+    const credentialMode = await detectCredentialMode();
+    if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey && !dryRun) {
+        console.error('ERROR:SUDOWORK_MANAGED_KEY');
+        console.error('Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
+        process.exit(1);
+    }
+
+    if (!dryRun && credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(apiKey)) {
+        console.error('ERROR:KEY_NOT_FOUND');
+        process.exit(1);
+    }
+
     const parsed = parseRef(ref);
     const explicitApiPath = endpointForPrefix(parsed.prefix, parsed.shareRef);
     const pageApiPath = `/api/v1/pages/${encodeURIComponent(parsed.shareRef)}`;

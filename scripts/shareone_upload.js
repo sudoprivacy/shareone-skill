@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const {
-    isSudowork,
+    CREDENTIAL_MODE_SUDOWORK_PROXY,
+    detectCredentialMode,
     printShareOneScriptError,
     requestBuffer,
     requestShareOneBuffer,
@@ -106,13 +107,15 @@ async function uploadFile(filePath, options) {
         process.exit(1);
     }
 
-    if (isSudowork() && options.apiKey) {
+    const credentialMode = await detectCredentialMode();
+
+    if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && options.apiKey) {
         console.error("ERROR:SUDOWORK_MANAGED_KEY");
         console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
         process.exit(1);
     }
 
-    if (!isSudowork() && !resolveDirectApiKey(options.apiKey)) {
+    if (credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(options.apiKey)) {
         console.error("ERROR:KEY_NOT_FOUND");
         process.exit(1);
     }

@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const {
-    isSudowork,
+    CREDENTIAL_MODE_SUDOWORK_PROXY,
+    detectCredentialMode,
     printShareOneScriptError,
     requestShareOneBuffer,
     resolveDirectApiKey,
@@ -46,18 +47,19 @@ if (!filename) {
     filename = path.basename(filePath);
 }
 
-if (isSudowork() && apiKey) {
-    console.error("ERROR:SUDOWORK_MANAGED_KEY");
-    console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-    process.exit(1);
-}
-
-if (!isSudowork() && !resolveDirectApiKey(apiKey)) {
-    console.error("ERROR:KEY_NOT_FOUND");
-    process.exit(1);
-}
-
 async function uploadPage() {
+    const credentialMode = await detectCredentialMode();
+    if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey) {
+        console.error("ERROR:SUDOWORK_MANAGED_KEY");
+        console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
+        process.exit(1);
+    }
+
+    if (credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(apiKey)) {
+        console.error("ERROR:KEY_NOT_FOUND");
+        process.exit(1);
+    }
+
     const content = fs.readFileSync(filePath, "utf-8");
 
     const payload = {

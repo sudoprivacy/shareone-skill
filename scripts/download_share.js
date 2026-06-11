@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const {
-    hasSudoworkApiKey,
-    isSudowork,
+    CREDENTIAL_MODE_SUDOWORK_PROXY,
+    detectCredentialMode,
     requestShareOneBuffer,
     resolveDirectApiKey,
 } = require('./shareone_client');
@@ -32,12 +32,6 @@ if (!ref) {
     process.exit(1);
 }
 
-if (isSudowork() && apiKey && !publicOnly) {
-    console.error("ERROR:SUDOWORK_MANAGED_KEY");
-    console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-    process.exit(1);
-}
-
 function extractShareRef(value) {
     const raw = String(value || '').trim();
     if (!raw) return null;
@@ -57,16 +51,11 @@ function extractShareRef(value) {
     }
 }
 
-async function tryOwnerDownload() {
+async function tryOwnerDownload(credentialMode) {
     if (publicOnly) return null;
-    let hasKey = Boolean(resolveDirectApiKey(apiKey));
-    if (isSudowork()) {
-        try {
-            hasKey = await hasSudoworkApiKey();
-        } catch (_) {
-            hasKey = false;
-        }
-    }
+    const hasKey = credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY
+        ? credentialMode.hasSudoworkKey
+        : Boolean(resolveDirectApiKey(apiKey));
     if (!hasKey) return null;
     const shareRef = extractShareRef(ref);
     if (!shareRef) return null;
@@ -101,7 +90,14 @@ async function publicDownload() {
 }
 
 (async () => {
-    const ownerResult = await tryOwnerDownload();
+    const credentialMode = await detectCredentialMode();
+    if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey && !publicOnly) {
+        console.error("ERROR:SUDOWORK_MANAGED_KEY");
+        console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
+        process.exit(1);
+    }
+
+    const ownerResult = await tryOwnerDownload(credentialMode);
     const result = ownerResult || await publicDownload();
     process.stdout.write(result.data);
 })().catch((error) => {
