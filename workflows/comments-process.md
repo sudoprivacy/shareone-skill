@@ -56,8 +56,6 @@ node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/download"
 
 使用 `publish-text-page.md` 的 PUT 更新流程重新发布改后的文件，保留同一 `share_id`。
 
-只更新内容时，不要重传 `--password` / `--watermark` / `--allow-comments`：服务端对 PUT 未传的字段一律保持原值。尤其不要为了“保险”重传访问密码——这会触发访客重新输入密码（相同密码不变更则不受影响，但省略最稳妥）。
-
 ### 步骤 5：写回复并关闭评论
 
 先在该父评论下发一条 AI 回复，明确告诉访问者改了什么。回复会自动继承父评论的锚点（`quote` / `highlighter_data`），无需重复传。含中文或嵌套 JSON 的 body 建议先写入文件，再用 `--data-file` 传，避免 shell 转义问题：
