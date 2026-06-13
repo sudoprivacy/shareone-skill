@@ -56,14 +56,18 @@ node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/download"
 
 使用 `publish-text-page.md` 的 PUT 更新流程重新发布改后的文件，保留同一 `share_id`。
 
+只更新内容时，不要重传 `--password` / `--watermark` / `--allow-comments`：服务端对 PUT 未传的字段一律保持原值。尤其不要为了“保险”重传访问密码——这会触发访客重新输入密码（相同密码不变更则不受影响，但省略最稳妥）。
+
 ### 步骤 5：写回复并关闭评论
 
-先在该父评论下发一条 AI 回复，明确告诉访问者改了什么：
+先在该父评论下发一条 AI 回复，明确告诉访问者改了什么。回复会自动继承父评论的锚点（`quote` / `highlighter_data`），无需重复传。含中文或嵌套 JSON 的 body 建议先写入文件，再用 `--data-file` 传，避免 shell 转义问题：
 
 ```bash
+cat > reply.json <<'JSON'
+{"parent_id":"<COMMENT_ID>","content":"已按你的建议把标题改成 ...，并调整了 ...","author_role":"agent"}
+JSON
 node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments" \
-  --method POST \
-  --data '{"parent_id":"<COMMENT_ID>","quote":"<父评论的 quote>","highlighter_data":"<父评论的 highlighter_data>","content":"已按你的建议把标题改成 ...，并调整了 ...","author_role":"agent"}'
+  --method POST --data-file reply.json
 ```
 
 `author_role: "agent"` 只在 owner 鉴权下生效，访问者会在侧栏看到 AI 徽标和蓝色背景的回复。
@@ -77,6 +81,12 @@ node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMEN
 ```
 
 `note` 会作为绿色“AI 已处理: ...”高亮区块显示在评论卡片底部，给访问者明确交代。
+
+如果误发了一条回复，可以删除（仅作者本人、且父评论仍为 `open` 时可删，会级联删除其回复）：
+
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>" --method DELETE
+```
 
 ## 3. 无法处理或无关评论
 
