@@ -1,6 +1,6 @@
 ---
 name: shareone
-version: 1.2.0
+version: 1.3.0
 description: 发布本地生成的 HTML、Markdown、TXT、PDF、Word 或 PPTX 到 ShareOne 平台，生成公网分享短链接；或者当用户提供 ShareOne 链接并要求下载文件、修改文件、拉取/处理评论时使用此技能。当用户要求“发布”、“分享”、“生成链接”、“上线”，或者“下载这个链接的文件”、“修改这个 ShareOne 链接的内容”、“拉取这个链接的评论”时，必须使用此技能。
 ---
 
@@ -63,6 +63,20 @@ node scripts/check_api_key.js
 - `SUDOWORK_ENV_UNAVAILABLE_KEY_NOT_FOUND`：当前在 Sudowork 中，但 Auth Proxy/secrets 环境不可用；skill 已回退到普通 AI Agent 凭据流程但没有找到 API Key。
 - `KEY_FOUND:<api_key>`：当前是普通 AI Agent 环境，且已找到 API Key。
 - `KEY_NOT_FOUND`：当前是普通 AI Agent 环境，且没有找到 API Key。
+
+如果怀疑凭据可能过期或被吊销，可加 `--validate` 实测一次（会请求 `/api/v1/me`）：
+
+```bash
+node scripts/check_api_key.js --validate
+```
+
+它在原有状态行之后再追加 `KEY_VALID`（可用）、`KEY_INVALID`（过期/被吊销，需重新设置）或 `KEY_VALIDATION_SKIPPED_NO_KEY`（没有 key 可验）。
+
+通用请求脚本 `shareone_api_request.js` 传请求体时，**含中文或嵌套 JSON 的 body 优先用 `--data-file <path>`（`-` 表示 stdin），不要用内联 `--data`**，避免 shell 转义导致 body 解析失败：
+
+```bash
+node scripts/shareone_api_request.js "<api_path>" --method POST --data-file body.json
+```
 
 术语固定：
 

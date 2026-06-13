@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
@@ -12,6 +13,7 @@ const args = process.argv.slice(2);
 let method = 'GET';
 let apiPath = null;
 let data = null;
+let dataFile = null;
 let apiKey = null;
 let publicRequest = false;
 
@@ -20,6 +22,8 @@ for (let i = 0; i < args.length; i++) {
         method = String(args[++i] || 'GET').toUpperCase();
     } else if (args[i] === '--data') {
         data = args[++i];
+    } else if (args[i] === '--data-file') {
+        dataFile = args[++i];
     } else if (args[i] === '--api-key') {
         apiKey = args[++i];
     } else if (args[i] === '--public') {
@@ -30,8 +34,26 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!apiPath) {
-    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>'] [--api-key <key>] [--public]");
+    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>' | --data-file <path|-> ] [--api-key <key>] [--public]");
+    console.error("  --data-file <path>  read the request body from a file ('-' for stdin); preferred for non-ASCII or nested-JSON bodies to avoid shell quoting issues.");
     process.exit(1);
+}
+
+// Prefer --data-file for bodies that are awkward to pass inline (CJK text,
+// nested/escaped JSON): file/stdin bytes reach the request verbatim, free of
+// shell quoting.
+if (dataFile !== null) {
+    if (data !== null) {
+        console.error("ERROR:BAD_ARGS");
+        console.error("Pass either --data or --data-file, not both.");
+        process.exit(1);
+    }
+    try {
+        data = fs.readFileSync(dataFile === '-' ? 0 : dataFile, 'utf8');
+    } catch (error) {
+        console.error(`ERROR:DATA_FILE_UNREADABLE: ${error.message}`);
+        process.exit(1);
+    }
 }
 
 const headers = {};
