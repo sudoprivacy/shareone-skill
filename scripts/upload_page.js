@@ -8,6 +8,8 @@ const {
     resolveDirectApiKey,
 } = require('./shareone_client');
 
+const ACTIVE_TASK_FILENAME = '.shareone_active_task';
+
 const args = process.argv.slice(2);
 let filePath = null;
 let apiKey = null;
@@ -17,6 +19,7 @@ let watermark = null;
 let shareId = null;
 let allowComments = null;
 let slug = null;
+let forceNew = false;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
@@ -33,14 +36,56 @@ for (let i = 0; i < args.length; i++) {
         slug = args[++i];
     } else if (args[i] === '--allow-comments') {
         allowComments = args[++i] === 'true';
+    } else if (args[i] === '--force-new') {
+        forceNew = true;
     } else if (!args[i].startsWith('--')) {
         filePath = args[i];
     }
 }
 
 if (!filePath) {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>]");
+    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
     process.exit(1);
+}
+
+if (!shareId && !forceNew && fs.existsSync(ACTIVE_TASK_FILENAME)) {
+    const activeShareId = fs.readFileSync(ACTIVE_TASK_FILENAME, 'utf-8').trim();
+    console.error("ERROR:ACTIVE_SHARE_TASK");
+    console.error(`检测到进行中的评论处理任务（目标 share: ${activeShareId}）。请使用 --share-id ${activeShareId} 执行 PUT 更新原链接，不要创建新链接。只有确认要创建全新链接时，才删除 ${ACTIVE_TASK_FILENAME} 文件或追加 --force-new。`);
+    process.exit(1);
+}
+
+const HISTORY_FILENAME = '.shareone_history.json';
+const absFilePath = path.resolve(filePath);
+
+function readHistory() {
+    try {
+        const data = JSON.parse(fs.readFileSync(HISTORY_FILENAME, 'utf-8'));
+        return data && typeof data === 'object' ? data : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+if (!shareId && !forceNew) {
+    const previous = readHistory()[absFilePath];
+    if (previous && previous.share_id) {
+        console.error("ERROR:FILE_PREVIOUSLY_PUBLISHED");
+        console.error(`该文件之前已发布过（share_id: ${previous.share_id}${previous.share_url ? `，链接: ${previous.share_url}` : ''}）。请使用 --share-id ${previous.share_id} 执行 PUT 更新原链接；只有确认用户要为同一文件创建全新链接时，才追加 --force-new。`);
+        process.exit(1);
+    }
+}
+
+function recordHistory(responseText) {
+    try {
+        const parsed = JSON.parse(responseText);
+        if (!parsed || !parsed.share_id) return;
+        const history = readHistory();
+        history[absFilePath] = { share_id: parsed.share_id, share_url: parsed.share_url };
+        fs.writeFileSync(HISTORY_FILENAME, JSON.stringify(history, null, 2));
+    } catch (_) {
+        // History is best-effort; never fail the upload because of it.
+    }
 }
 
 if (!filename) {
@@ -91,11 +136,12 @@ async function uploadPage() {
         }
     }, data);
 
+    console.log(res.text);
+    recordHistory(res.text);
+
     if (shareId) {
         await verifyUpdatedContent(shareId, content);
     }
-
-    console.log(res.text);
 }
 
 async function verifyUpdatedContent(updatedShareId, expectedContent) {
