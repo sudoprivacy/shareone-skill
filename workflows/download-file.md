@@ -1,6 +1,6 @@
 # 下载 ShareOne 链接文件
 
-当用户要求“下载这个 ShareOne 链接的文件”或“取回这个链接的源内容”时读取本文件。执行前必须已经完成 `environment-and-credentials.md`。
+当用户要求“下载这个 ShareOne 链接的文件”或“取回这个链接的源内容”时读取本文件。普通下载不需要先配置 API Key：脚本会在已有凭据时优先尝试 owner 下载，没有凭据时自动退回公开下载。只有用户明确要求用 owner 身份下载、或公开下载失败后需要 owner 权限时，才回到 `environment-and-credentials.md` 完成凭据配置。
 
 ## 1. 获取链接或 ref
 
@@ -8,7 +8,7 @@
 
 ## 2. 下载内容
 
-使用 `--save`，脚本会按服务端返回的文件名自动保存到当前目录，并在 stdout 输出 `SAVED:<本地文件名>`：
+使用 `--save`，脚本会按服务端返回的文件名自动保存到当前目录；如果同名文件已存在，会自动添加数字后缀避免覆盖。成功后在 stdout 输出 `SAVED:<本地文件名>`：
 
 ```bash
 node scripts/download_share.js "<LINK_OR_ID>" --save

@@ -88,7 +88,12 @@ async function saveKeyAndRecheck(apiKey) {
         try {
             await saveSudoworkApiKey(apiKey);
             savedToSudowork = true;
-        } catch (_) {
+        } catch (error) {
+            credentialMode = await detectCredentialMode({ refresh: true });
+            if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY) {
+                printSudoworkWriteBroken();
+                process.exit(1);
+            }
             saveLocalApiKey(apiKey);
         }
 
@@ -143,7 +148,12 @@ async function createGuestKey() {
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY) {
         try {
             await saveSudoworkApiKey(result.api_key);
-        } catch (_) {
+        } catch (error) {
+            const refreshedMode = await detectCredentialMode({ refresh: true });
+            if (refreshedMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY) {
+                printSudoworkWriteBroken();
+                process.exit(1);
+            }
             saveLocalApiKey(result.api_key);
             fallbackSaved = true;
         }

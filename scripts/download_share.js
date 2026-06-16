@@ -126,6 +126,17 @@ function sanitizeFilename(name) {
     return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : null;
 }
 
+function uniqueFilename(name) {
+    if (!fs.existsSync(name)) return name;
+    const ext = path.extname(name);
+    const stem = ext ? name.slice(0, -ext.length) : name;
+    for (let i = 1; i < 1000; i++) {
+        const candidate = `${stem}-${i}${ext}`;
+        if (!fs.existsSync(candidate)) return candidate;
+    }
+    throw new Error(`Could not choose a non-conflicting filename for ${name}`);
+}
+
 function saveDownload(result) {
     const serverName = sanitizeFilename(parseFilenameFromDisposition((result.headers || {})['content-disposition']));
     const shareRef = sanitizeFilename(extractShareRef(ref)) || 'share';
@@ -135,9 +146,10 @@ function saveDownload(result) {
         console.error(`ANCHOR_WRITTEN:${ACTIVE_TASK_FILENAME}`);
     }
 
-    const outputName = taskAnchor
+    const preferredName = taskAnchor
         ? `shareone_${shareRef}_source${serverName ? path.extname(serverName) || '.html' : '.html'}`
         : (serverName || `shareone_${shareRef}_download`);
+    const outputName = uniqueFilename(preferredName);
 
     fs.writeFileSync(outputName, result.data);
     console.log(`SAVED:${outputName}`);

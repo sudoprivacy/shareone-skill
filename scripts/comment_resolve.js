@@ -71,6 +71,12 @@ if (!dismiss && !reply) {
     process.exit(1);
 }
 
+if (dismiss && !note) {
+    console.error('ERROR:NOTE_REQUIRED');
+    console.error('dismissed 闭环要求用 --note 说明无法处理或无需处理的原因。');
+    process.exit(1);
+}
+
 (async () => {
     const credentialMode = await detectCredentialMode();
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey) {

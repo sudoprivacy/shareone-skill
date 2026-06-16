@@ -89,7 +89,7 @@ if (channel === 'text') {
         console.error('文本页面通道不支持 --content-type；该选项只用于二进制文件上传。');
         process.exit(1);
     }
-    for (const flag of ['--filename', '--password', '--watermark', '--share-id', '--slug', '--allow-comments', '--api-key']) {
+    for (const flag of ['--filename', '--password', '--watermark', '--share-id', '--slug', '--allow-comments', '--base-url', '--api-key']) {
         if (options[flag] !== undefined) targetArgs.push(flag, options[flag]);
     }
     if (boolOptions.has('--force-new')) targetArgs.push('--force-new');

@@ -55,7 +55,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
    这是元数据更新：不要按文件类型路由，不要下载源文件，不要使用 `publish.js`，不要重新上传内容。对二进制文件链接（`/pdf/`、`/ppt/`、`/word/`）同样适用本条。
 
 3. **下载 ShareOne 链接的文件或取回源内容**
-   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/download-file.md`。
+   → 读 `workflows/download-file.md`。下载脚本会在已有凭据时优先尝试 owner 下载，没有凭据时自动走公开下载；不要为了普通下载强制配置 API Key。
 
 4. **只查看、拉取、总结 ShareOne 链接评论（用户没有要求修改）**
    → 读 `workflows/comments-view.md`。查看评论走公开接口，无需凭据检查。
@@ -91,7 +91,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 
 以下步骤是阻塞性用户通知，不是可选说明。触发后必须先发给用户，再继续后续操作。
 
-- 如果 `create_guest_key.js` 输出 `GUEST_KEY_CREATED:<api_key>`，必须立即向用户发送临时 API Key、绑定账号链接和保存提醒（话术见 `workflows/environment-and-credentials.md`）。即使 key 已经自动保存，也不能省略该通知；发送前不得继续执行原任务的上传、下载、评论处理命令。
+- 如果 `ensure_credentials.js --create-guest` 或底层 `create_guest_key.js` 输出 `GUEST_KEY_CREATED:<api_key>`，必须立即向用户发送临时 API Key、绑定账号链接和保存提醒（话术见 `workflows/environment-and-credentials.md`）。即使 key 已经自动保存，也不能省略该通知；发送前不得继续执行原任务的上传、下载、评论处理命令。
 - 本会话首次向用户展示生成的 `share_url` 时，必须按 `workflows/result-and-errors.md` 提示所有未使用的高级功能：自定义短链接名称、访问密码、水印。已使用的能力不再提示；三项都已使用则不提示。
 
 ## 全局约束
