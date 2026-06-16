@@ -83,6 +83,12 @@ node scripts/comment_resolve.js "<REF>" <COMMENT_ID> --reply "已按你的建议
 - 如果输出 `ERROR:IS_REPLY:<parent_id>`，说明传入的是回复 ID，按提示改用父评论 ID 重试。
 - 如果输出 `ERROR:AUTH_FAILED`（403），先检查该链接的评论功能是否已被关闭（`allow_comments=false`）：可通过 `update-share-settings.md` 重新开启评论后重试，或告知用户评论已关闭、无法写回复。
 
+如果误发了一条回复，可以删除（仅作者本人、且父评论仍为 `open` 时可删，会级联删除其回复）：
+
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>" --method DELETE
+```
+
 ## 3. 无法处理或无关评论
 
 对于无法处理或无关的评论，必须 dismiss，不要无视：
