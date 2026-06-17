@@ -314,7 +314,14 @@ function getErrorDetail(error) {
     if (!text) return '';
     try {
         const parsed = JSON.parse(text);
-        return String(parsed.detail || parsed.message || text);
+        if (!parsed || typeof parsed !== 'object') {
+            return text;
+        }
+        const detail = parsed.detail;
+        if (detail && typeof detail === 'object') {
+            return String(detail.message || detail.code || parsed.message || text);
+        }
+        return String(detail || parsed.message || text);
     } catch (_) {
         return text;
     }
