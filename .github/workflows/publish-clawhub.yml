@@ -30,6 +30,7 @@ jobs:
             echo "SKILL.md version ${skill_version} does not match release tag ${tag}" >&2
             exit 1
           fi
+          echo "SKILL_VERSION=${version}" >> "$GITHUB_ENV"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -49,4 +50,4 @@ jobs:
             exit 1
           fi
           clawhub login --token "${CLAWHUB_TOKEN}"
-          clawhub skill publish .
+          clawhub skill publish . --version "${SKILL_VERSION}"
