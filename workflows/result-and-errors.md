@@ -6,25 +6,17 @@
 
 如果脚本 stdout 返回的 JSON 表示成功：
 
-- 返回结果中已经包含完整的 `share_url` 字段，例如 `https://shareone.app/s/<share_id>`。
-- 如果服务端配置了国内代理地址，返回结果还会包含 `backend_url` 字段。
-- 必须直接使用返回的 `share_url` 展示给用户；如果返回中包含 `backend_url`，同时作为备用链接展示给用户。
+- 返回结果中已经包含完整的 `share_url` 字段，例如 `https://s.shareone.vip/s/<share_id>`。
+- 必须直接使用返回的 `share_url` 展示给用户；不要展示备用链接。
 - 如果返回中包含 `custom_slug_warning`，必须同时展示该提示；这表示内容已发布成功，但用户请求的自定义短链接没有生效。
 - 如果返回中包含 `custom_slug_suggestions`，必须把其中的推荐短链接名称一起展示给用户。
-- 不要自己拼接分享链接或备用链接。
+- 不要自己拼接分享链接。
 
 如果设置了密码，必须加粗显示密码：
 
 > 发布成功！
 > 链接：<返回的 share_url>
-> 备用链接：<返回的 backend_url，仅当存在时展示>
 > 提取码：**<密码>**
-
-如果未设置密码但返回了 `backend_url`：
-
-> 发布成功！
-> 链接：<返回的 share_url>
-> 备用链接：<返回的 backend_url>
 
 ## 2. 功能提示
 

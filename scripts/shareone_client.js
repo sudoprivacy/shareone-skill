@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_BASE_URL = 'https://shareone.app';
+const DEFAULT_BASE_URL = 'https://shareone.vip';
 const CREDENTIALS_FILENAME = '.shareone_credentials';
 const SUDOWORK_SECRET_NAMESPACE = 'service:shareone';
 const SUDOWORK_SECRET_KEY = 'X-API-Key';

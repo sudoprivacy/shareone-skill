@@ -35,11 +35,11 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - "用 shareone 分享上一轮对话"
 - "把我刚才写的代码/大段文字分享出去"
 - "Share your last response as a note"
-- "帮我下载这个 ShareOne 链接的文件：https://shareone.app/s/xxx"
-- "拉取一下这个链接的评论：https://shareone.app/s/xxx"
-- "给这个 ShareOne 链接加水印：https://shareone.app/s/xxx"
-- "根据这个链接的评论修改页面：https://shareone.app/s/xxx"
-- "修改这个 ShareOne 链接的内容：https://shareone.app/s/xxx"
+- "帮我下载这个 ShareOne 链接的文件：https://s.shareone.vip/s/xxx"
+- "拉取一下这个链接的评论：https://s.shareone.vip/s/xxx"
+- "给这个 ShareOne 链接加水印：https://s.shareone.vip/s/xxx"
+- "根据这个链接的评论修改页面：https://s.shareone.vip/s/xxx"
+- "修改这个 ShareOne 链接的内容：https://s.shareone.vip/s/xxx"
 
 ## 路由判定顺序（唯一路由依据）
 
@@ -97,7 +97,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 ## 全局约束
 
 - 发布前必须完成凭据检查和必要的凭据配置。
-- 发布成功后必须直接使用脚本返回的 `share_url`，不要自行拼接分享链接；如果返回中包含 `backend_url`，必须同时作为“备用链接”展示给用户。
+- 发布成功后必须直接使用脚本返回的 `share_url`，不要自行拼接分享链接；不要展示备用链接。
 - 只有当用户明确要求开启评论、允许讨论或协同模式时，才添加 `--allow-comments true`。默认不开启评论。
 - 自定义短链接（slug）：服务端会根据文件名自动生成可读的 slug（如 `quarterly-report`），客户端无需额外操作。只有用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”时，才在发布命令添加 `--slug xxx` 覆盖自动生成；slug 冲突时把服务端提示反馈给用户，不要静默改名。
 - 评论处理必须形成闭环：认领、修改、重新发布、回复、关闭或 dismiss。
@@ -109,6 +109,5 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 如果本轮创建了临时 API Key，是否已经把 API Key、绑定账号链接和保存提醒发给用户。
 - 如果本轮**创建了新分享链接**，是否在执行创建命令前获得用户明确回复“同意”或 `agree`；如果只是更新已确认的链接，则无需此项。
 - 如果发布成功，是否直接展示返回的 `share_url`，没有自行拼接链接。
-- 如果返回中包含 `backend_url`，是否作为备用链接展示给用户。
 - 如果返回中包含 `custom_slug_warning` 或 `custom_slug_suggestions`，是否展示给用户。
 - 如果这是本会话首次展示生成的 `share_url`，是否提示所有未使用的高级功能。
