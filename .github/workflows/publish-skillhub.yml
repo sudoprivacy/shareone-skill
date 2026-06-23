@@ -65,5 +65,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          skillhub publish . --dry-run
-          skillhub publish . --changelog "Release ${SKILL_SLUG} v${SKILL_VERSION}"
+          staging_dir="${RUNNER_TEMP}/skillhub-publish"
+          rm -rf "$staging_dir"
+          mkdir -p "$staging_dir"
+          cp SKILL.md "$staging_dir/"
+          cp -R scripts workflows "$staging_dir/"
+          skillhub publish "$staging_dir" --dry-run
+          skillhub publish "$staging_dir" --changelog "Release ${SKILL_SLUG} v${SKILL_VERSION}"

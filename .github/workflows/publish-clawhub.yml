@@ -56,4 +56,15 @@ jobs:
             exit 1
           fi
           clawhub login --token "${CLAWHUB_TOKEN}"
-          clawhub skill publish . --slug "${SKILL_NAME}" --version "${SKILL_VERSION}"
+          set +e
+          output="$(clawhub skill publish . --slug "${SKILL_NAME}" --version "${SKILL_VERSION}" 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            if printf '%s\n' "$output" | grep -Fq "Version ${SKILL_VERSION} already exists"; then
+              echo "ClawHub version ${SKILL_VERSION} already exists; treating tag replay as successful."
+              exit 0
+            fi
+            exit "$status"
+          fi
