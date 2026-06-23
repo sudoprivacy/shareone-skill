@@ -24,6 +24,8 @@ let forceNew = false;
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
         apiKey = args[++i];
+    } else if (args[i] === '--base-url') {
+        process.env.SHAREONE_BASE_URL = args[++i];
     } else if (args[i] === '--filename') {
         filename = args[++i];
     } else if (args[i] === '--password') {
@@ -44,7 +46,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (!filePath) {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
+    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
     process.exit(1);
 }
 
