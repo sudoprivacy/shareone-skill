@@ -37,6 +37,7 @@ jobs:
           fi
           echo "SKILL_NAME=${skill_name}" >> "$GITHUB_ENV"
           echo "SKILL_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "SKILL_DISPLAY_NAME=ShareOne File Publisher & Short Links" >> "$GITHUB_ENV"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -57,7 +58,7 @@ jobs:
           fi
           clawhub login --token "${CLAWHUB_TOKEN}"
           set +e
-          output="$(clawhub skill publish . --slug "${SKILL_NAME}" --version "${SKILL_VERSION}" 2>&1)"
+          output="$(clawhub skill publish . --slug "${SKILL_NAME}" --version "${SKILL_VERSION}" --name "${SKILL_DISPLAY_NAME}" 2>&1)"
           status=$?
           set -e
           printf '%s\n' "$output"
