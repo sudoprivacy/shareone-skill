@@ -1,8 +1,8 @@
 # 发布二进制文件
 
-当用户要发布 PDF、PPTX、PPT、Word、图片、zip 或其他二进制文件时读取本文件。发布前必须已经完成 `environment-and-credentials.md`。
+当用户要发布 PDF、PPTX、PPT 或 Word 文档时读取本文件。发布前必须已经完成 `environment-and-credentials.md`。
 
-适用文件类型包括但不限于：`.pdf`、`.ppt`、`.pptx`、`.doc`、`.docx`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.zip`。
+适用文件类型：`.pdf`、`.ppt`、`.pptx`、`.doc`、`.docx`。
 
 如果用户说“发布这个 pptx / PPT / 演示文稿 / presentation”，必须使用本 workflow，不要读取 `publish-text-page.md`。发布命令统一是 `publish.js`，脚本会自动识别二进制文件并走直传通道。
 
@@ -25,7 +25,7 @@
 
 由于二进制文件可能较大，ShareOne 采用直传云存储方式，支持 S3 或 Azure。脚本会自动根据服务端返回的 `upload_type` 判断走 S3 表单上传还是 Azure PUT 直传。
 
-首次发布 `.pptx`、`.ppt`、`.pdf`、Word、图片、zip 等二进制文件时，执行：
+首次发布 `.pptx`、`.ppt`、`.pdf` 或 Word 文档时，执行：
 
 ```bash
 node scripts/publish.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"]

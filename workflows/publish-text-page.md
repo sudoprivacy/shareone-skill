@@ -4,7 +4,7 @@
 
 适用文件类型：`.html`、`.md`、`.txt`。
 
-不适用文件类型：`.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、图片、zip 或其他二进制文件。遇到这些文件时，停止本 workflow，改读 `publish-binary-file.md`（那里的命令同样是 `publish.js`，但规则不同）。即使误判了类型，`publish.js` 也会自动把二进制文件分发到正确的上传通道，不会发错接口。
+不适用文件类型：`.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`。遇到这些文件时，停止本 workflow，改读 `publish-binary-file.md`（那里的命令同样是 `publish.js`，但规则不同）。即使误判了类型，`publish.js` 也会自动把支持的二进制文档分发到正确的上传通道，不会发错接口。
 
 ## 1. 识别目标内容与格式保持规则
 
@@ -15,7 +15,7 @@
 - 如果用户要求分享对话、大段文本或代码（内容尚未落盘）：从对话历史中提取完整文本或代码块，**默认保存为 `.md` 临时文件发布**（纯文本可用 `.txt`），例如 `share_note.md`；同样只有用户明确要求美化时才包装成 `.html`。
 - 如果用户没有指定文件：根据上下文寻找最近一次生成或编辑的文本/HTML 文件，例如 `.html`、`.md`、`.txt`，并按上面的格式保持规则原样发布。
 - 如果锁定的文件不存在，停止并告知用户。
-- 如果锁定的文件是 `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`、图片、zip 或其他二进制文件，停止本 workflow，改读 `publish-binary-file.md`。
+- 如果锁定的文件是 `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`，停止本 workflow，改读 `publish-binary-file.md`。
 - 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。服务端会根据文件名自动生成可读的 slug，客户端无需主动设置。只有用户明确说”链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才用 `--slug` 覆盖。
 
 ## 2. 发布前安全确认
