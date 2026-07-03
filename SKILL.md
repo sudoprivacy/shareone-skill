@@ -1,12 +1,12 @@
 ---
 name: shareone
-description: Publish and host HTML, Markdown, PDFs, Word, and PowerPoint files as ShareOne public short links. Use when uploading supported files, creating share links, adding passwords/watermarks, enabling comments, downloading links, or updating shares.
+description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
 license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.2.4
-  summary: Publish files, HTML pages, and documents as ShareOne public short links
+  version: 1.2.5
+  summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
     - publish
@@ -18,7 +18,7 @@ metadata:
 
 # AI Agent 技能：发布到 ShareOne (shareone)
 
-Publish, upload, host, download, and update ShareOne public links. This skill creates short share links for HTML pages, Markdown notes, text, PDFs, Word documents, PowerPoint presentations, generated conversation content, and local web pages; it also manages passwords, watermarks, comments, downloads, and review-comment processing.
+Host HTML/Markdown pages and share PDF, Word, and PowerPoint documents with ShareOne public short links. Covers page publishing, document sharing, password protection, watermarks, review comments, downloads, and updates to existing shares.
 
 这个 Skill 允许 AI Agent 将当前生成的历史会话以及 HTML/Markdown/TXT/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接；也可以对已有 ShareOne 链接执行下载、内容更新、设置修改和评论处理。
 

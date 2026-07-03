@@ -37,7 +37,7 @@ jobs:
           fi
           echo "SKILL_NAME=${skill_name}" >> "$GITHUB_ENV"
           echo "SKILL_VERSION=${version}" >> "$GITHUB_ENV"
-          echo "SKILL_DISPLAY_NAME=ShareOne Publish, HTML Hosting & Short Links" >> "$GITHUB_ENV"
+          echo "SKILL_DISPLAY_NAME=ShareOne HTML & Document Share Links" >> "$GITHUB_ENV"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
