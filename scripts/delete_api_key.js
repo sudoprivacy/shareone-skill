@@ -8,6 +8,12 @@ const {
     isSudowork,
 } = require('./shareone_client');
 
+if (process.argv.length > 2) {
+    console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[2]}`);
+    console.error('Usage: node delete_api_key.js');
+    process.exit(1);
+}
+
 async function deleteApiKey() {
     const credentialMode = await detectCredentialMode({ refresh: true });
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY) {

@@ -7,8 +7,13 @@ const {
 } = require('./shareone_client');
 
 const apiKey = process.argv[2];
-if (!apiKey) {
-    console.error("Please provide an API key.");
+if (!apiKey || process.argv.length > 3) {
+    if (process.argv.length > 3) {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[3]}`);
+    } else {
+        console.error("ERROR:MISSING_VALUE:<api_key>");
+    }
+    console.error("Usage: node save_api_key.js <api_key>");
     process.exit(1);
 }
 

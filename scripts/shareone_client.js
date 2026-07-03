@@ -74,7 +74,12 @@ function resolveDirectApiKey(explicitApiKey) {
 function saveLocalApiKey(apiKey) {
     const candidates = getCredentialPathCandidates();
     const credentialsPath = candidates.find(canWriteCredentialsPath) || candidates[candidates.length - 1] || getCredentialsPath();
-    fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }));
+    fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }), { mode: 0o600 });
+    try {
+        fs.chmodSync(credentialsPath, 0o600);
+    } catch (_) {
+        // Best-effort on filesystems that do not support POSIX permissions.
+    }
     return credentialsPath;
 }
 

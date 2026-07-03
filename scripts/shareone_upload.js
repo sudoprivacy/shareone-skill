@@ -176,28 +176,53 @@ const options = {
     slug: null,
 };
 
+function usage() {
+    console.error("Usage: node shareone_upload.js <file_path> [--api-key <api_key>] [--base-url <base_url>] [--filename <name>] [--content-type <mime>] [--password <password>] [--watermark <watermark>] [--slug <slug>]");
+}
+
+function nextValue(index, flag) {
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith('--')) {
+        console.error(`ERROR:MISSING_VALUE:${flag}`);
+        usage();
+        process.exit(1);
+    }
+    return value;
+}
+
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
-        options.apiKey = args[++i];
+        options.apiKey = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--base-url') {
-        process.env.SHAREONE_BASE_URL = args[++i];
+        process.env.SHAREONE_BASE_URL = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--filename') {
-        options.filename = args[++i];
+        options.filename = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--content-type') {
-        options.contentType = args[++i];
+        options.contentType = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--password') {
-        options.password = args[++i];
+        options.password = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--watermark') {
-        options.watermark = args[++i];
+        options.watermark = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--slug') {
-        options.slug = args[++i];
-    } else if (!args[i].startsWith('--')) {
+        options.slug = nextValue(i, args[i]);
+        i += 1;
+    } else if (!args[i].startsWith('--') && !filePath) {
         filePath = args[i];
+    } else {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
+        usage();
+        process.exit(1);
     }
 }
 
 if (!filePath) {
-    console.error("Usage: node shareone_upload.js <file_path> [--api-key <api_key>] [--base-url <base_url>] [--filename <name>] [--content-type <mime>] [--password <password>] [--watermark <watermark>] [--slug <slug>]");
+    usage();
     process.exit(1);
 }
 

@@ -21,8 +21,8 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           version="${tag#v}"
-          skill_slug="$(sed -n 's/^slug:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
-          skill_version="$(sed -n 's/^version:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
+          skill_slug="$(sed -n 's/^[[:space:]]*slug:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
+          skill_version="$(sed -n 's/^[[:space:]]*version:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
           if [ -z "$skill_slug" ]; then
             echo "Missing skill slug in SKILL.md" >&2
             exit 1
@@ -69,7 +69,7 @@ jobs:
           rm -rf "$staging_dir"
           mkdir -p "$staging_dir"
           cp SKILL.md "$staging_dir/"
-          cp -R scripts workflows "$staging_dir/"
+          cp -R agents scripts workflows "$staging_dir/"
           skillhub publish "$staging_dir" --dry-run
           set +e
           output="$(skillhub publish "$staging_dir" --changelog "Release ${SKILL_SLUG} v${SKILL_VERSION}" 2>&1)"

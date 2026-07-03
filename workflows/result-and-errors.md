@@ -1,6 +1,6 @@
 # 结果反馈与错误处理
 
-发布、更新、上传或通用 API 请求完成后读取本文件。判断依据是**脚本的输出**：stdout 输出包含 `share_url` 的 JSON 即成功；stderr 输出 `ERROR:<code>` 即失败。
+发布、更新、上传或通用 API 请求完成后读取本文件。判断依据是**脚本的输出**：stdout 输出包含成功 JSON 或成功 token 即成功；stderr 输出 `ERROR:<code>` 即失败。
 
 ## 1. 发布成功
 
@@ -40,7 +40,16 @@ slug 冲突在两类发布中的表现**不同**，不要混淆：
 - **文本页面（`/api/v1/pages`）**：slug 冲突会导致**发布失败**，返回 HTTP 400 且 `detail.code` 为 `CUSTOM_SLUG_TAKEN`。提示用户短链接名称已被占用；如果 `detail.suggested_slugs` 中包含推荐名称，必须一起展示。不要告诉用户“已发布成功”。
 - **二进制文件（`/api/v1/files`）**：slug 冲突时**发布仍然成功**，返回中带 `custom_slug_warning`（和可能的 `custom_slug_suggestions`），只是自定义短链接没有生效。展示链接的同时必须展示该提示。
 
-## 4. 常见错误
+## 4. 非发布操作成功
+
+对不一定返回 `share_url` 的操作，按脚本输出反馈结果：
+
+- `update_share_settings.js`：stdout 为 JSON 且无 `ERROR:` 即设置更新成功。若 JSON 包含 `share_url`、`custom_slug_warning` 或 `custom_slug_suggestions`，按第 1 节展示；否则简短说明设置已更新。
+- `comment_resolve.js`：输出 `REPLY_POSTED:<id>` 后又输出 `COMMENT_RESOLVED:<id>` 表示评论已回复并关闭；输出 `COMMENT_DISMISSED:<id>` 表示评论已忽略并记录原因。
+- `shareone_api_request.js`：stdout 为接口返回体；用于查看评论时，摘要或列出评论即可，不要按发布成功话术处理。
+- `download_share.js --save`：stdout 输出 `SAVED:<本地文件名>` 表示下载并保存成功；不要提示发布高级功能。
+
+## 5. 常见错误
 
 - 内容违规拦截，HTTP 400：提取 JSON 中的 `detail` 字段展示给用户，例如“发布失败，内容未通过安全审核。原因：<detail>”。
 - API Key 无效或权限不足，脚本输出 `ERROR:AUTH_FAILED`：提示“API Key 无效或权限不足”。
@@ -50,4 +59,5 @@ slug 冲突在两类发布中的表现**不同**，不要混淆：
 - `ERROR:LOOKS_LIKE_SHARE_LINK`：把 ShareOne 链接当成本地文件传给了发布脚本。要修改已有链接设置用 `update_share_settings.js`，要下载用 `download_share.js`。
 - `ERROR:UPDATE_VERIFY_FAILED`：不要按发布成功处理（即使 stdout 中已经输出了包含 `share_url` 的 JSON）。提示用户“ShareOne 接口接受了更新请求，但回读源内容与本地文件不一致，更新可能没有真正生效”，并保留本地文件，等待用户决定是否重试或作为新页面发布。
 - `ERROR:ACTIVE_SHARE_TASK`：当前目录存在 `.shareone_active_task`（评论处理任务进行中），但发布命令没有带 `--share-id`。按错误提示中给出的 id 改用 `--share-id <id>` 执行 PUT 更新原链接；只有在确认用户确实要创建全新链接时，才删除该锚点文件或追加 `--force-new` 重试。
+- `ERROR:UNKNOWN_ARGUMENT:<arg>` 或 `ERROR:MISSING_VALUE:<flag>`：命令参数写错或缺值。按脚本 Usage 修正命令，不要绕过脚本。
 - 下载相关错误码（`PASSWORD_REQUIRED`、`PASSWORD_INVALID`、`DOWNLOAD_NOT_ALLOWED`、`SHARE_NOT_FOUND`）的处理见 `download-file.md`。

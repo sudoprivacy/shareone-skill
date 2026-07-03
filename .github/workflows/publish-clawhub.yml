@@ -22,7 +22,7 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           version="${tag#v}"
           skill_name="$(sed -n 's/^name:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
-          skill_version="$(sed -n 's/^version:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
+          skill_version="$(sed -n 's/^[[:space:]]*version:[[:space:]]*//p' SKILL.md | head -n 1 | tr -d '\r')"
           if [ -z "$skill_name" ]; then
             echo "Missing skill name in SKILL.md" >&2
             exit 1

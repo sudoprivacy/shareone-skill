@@ -7,6 +7,12 @@ const {
     saveSudoworkApiKey,
 } = require('./shareone_client');
 
+if (process.argv.length > 2) {
+    console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[2]}`);
+    console.error('Usage: node create_guest_key.js');
+    process.exit(1);
+}
+
 async function createGuestKey() {
     try {
         const credentialMode = await detectCredentialMode({ refresh: true });

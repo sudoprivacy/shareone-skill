@@ -19,13 +19,30 @@ let publicOnly = false;
 let save = false;
 let taskAnchor = false;
 
+function usage() {
+    console.error("Usage: node download_share.js <ref> [--password <password>] [--api-key <key>] [--public-only] [--save] [--task-anchor]");
+}
+
+function nextValue(index, flag) {
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith('--')) {
+        console.error(`ERROR:MISSING_VALUE:${flag}`);
+        usage();
+        process.exit(1);
+    }
+    return value;
+}
+
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--ref') {
-        ref = args[++i];
+        ref = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--password') {
-        password = args[++i];
+        password = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--api-key') {
-        apiKey = args[++i];
+        apiKey = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--public-only') {
         publicOnly = true;
     } else if (args[i] === '--save') {
@@ -35,11 +52,15 @@ for (let i = 0; i < args.length; i++) {
         save = true;
     } else if (!args[i].startsWith('--') && !ref) {
         ref = args[i];
+    } else {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
+        usage();
+        process.exit(1);
     }
 }
 
 if (!ref) {
-    console.error("Usage: node download_share.js <ref> [--password <password>] [--api-key <key>] [--public-only] [--save] [--task-anchor]");
+    usage();
     process.exit(1);
 }
 

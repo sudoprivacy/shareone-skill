@@ -1,0 +1,7 @@
+interface:
+  display_name: "ShareOne"
+  short_description: "发布文件和内容为公网分享链接"
+  default_prompt: "Use $shareone to publish a local file or update an existing ShareOne link."
+
+policy:
+  allow_implicit_invocation: true

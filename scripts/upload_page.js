@@ -21,32 +21,66 @@ let allowComments = null;
 let slug = null;
 let forceNew = false;
 
+function usage() {
+    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
+}
+
+function nextValue(index, flag) {
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith('--')) {
+        console.error(`ERROR:MISSING_VALUE:${flag}`);
+        usage();
+        process.exit(1);
+    }
+    return value;
+}
+
+function parseBoolean(value, flag) {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    console.error(`ERROR:INVALID_BOOLEAN:${flag}`);
+    console.error(`${flag} must be true or false.`);
+    process.exit(1);
+}
+
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
-        apiKey = args[++i];
+        apiKey = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--base-url') {
-        process.env.SHAREONE_BASE_URL = args[++i];
+        process.env.SHAREONE_BASE_URL = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--filename') {
-        filename = args[++i];
+        filename = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--password') {
-        password = args[++i];
+        password = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--watermark') {
-        watermark = args[++i];
+        watermark = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--share-id') {
-        shareId = args[++i];
+        shareId = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--slug') {
-        slug = args[++i];
+        slug = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--allow-comments') {
-        allowComments = args[++i] === 'true';
+        allowComments = parseBoolean(nextValue(i, args[i]), args[i]);
+        i += 1;
     } else if (args[i] === '--force-new') {
         forceNew = true;
-    } else if (!args[i].startsWith('--')) {
+    } else if (!args[i].startsWith('--') && !filePath) {
         filePath = args[i];
+    } else {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
+        usage();
+        process.exit(1);
     }
 }
 
 if (!filePath) {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
+    usage();
     process.exit(1);
 }
 
