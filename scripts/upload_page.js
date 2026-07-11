@@ -19,10 +19,11 @@ let watermark = null;
 let shareId = null;
 let allowComments = null;
 let slug = null;
+let remoteUrl = null;
 let forceNew = false;
 
 function usage() {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
+    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
 }
 
 function nextValue(index, flag) {
@@ -68,6 +69,9 @@ for (let i = 0; i < args.length; i++) {
     } else if (args[i] === '--allow-comments') {
         allowComments = parseBoolean(nextValue(i, args[i]), args[i]);
         i += 1;
+    } else if (args[i] === '--remote-url') {
+        remoteUrl = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--force-new') {
         forceNew = true;
     } else if (!args[i].startsWith('--') && !filePath) {
@@ -79,7 +83,7 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
-if (!filePath) {
+if (!filePath && !remoteUrl) {
     usage();
     process.exit(1);
 }
@@ -92,7 +96,7 @@ if (!shareId && !forceNew && fs.existsSync(ACTIVE_TASK_FILENAME)) {
 }
 
 const HISTORY_FILENAME = '.shareone_history.json';
-const absFilePath = path.resolve(filePath);
+const absFilePath = filePath ? path.resolve(filePath) : null;
 
 function readHistory() {
     try {
@@ -103,7 +107,7 @@ function readHistory() {
     }
 }
 
-if (!shareId && !forceNew) {
+if (!shareId && !forceNew && absFilePath) {
     const previous = readHistory()[absFilePath];
     if (previous && previous.share_id) {
         console.error("ERROR:FILE_PREVIOUSLY_PUBLISHED");
@@ -113,6 +117,7 @@ if (!shareId && !forceNew) {
 }
 
 function recordHistory(responseText) {
+    if (!absFilePath) return; // remote URL mode has no local file to track
     try {
         const parsed = JSON.parse(responseText);
         if (!parsed || !parsed.share_id) return;
@@ -124,7 +129,7 @@ function recordHistory(responseText) {
     }
 }
 
-if (!filename) {
+if (!filename && filePath) {
     filename = path.basename(filePath);
 }
 
@@ -141,12 +146,20 @@ async function uploadPage() {
         process.exit(1);
     }
 
-    const content = fs.readFileSync(filePath, "utf-8");
+    let payload;
 
-    const payload = {
-        filename: filename,
-        html_content: content
-    };
+    if (remoteUrl) {
+        // Remote URL mode: server fetches content from the URL
+        payload = { remote_url: remoteUrl };
+        if (filename) payload.filename = filename;
+    } else {
+        // Local file mode: read and upload content
+        const content = fs.readFileSync(filePath, "utf-8");
+        payload = {
+            filename: filename,
+            html_content: content,
+        };
+    }
 
     if (password !== null) payload.password = password;
     if (watermark !== null) payload.watermark = watermark;
@@ -175,7 +188,8 @@ async function uploadPage() {
     console.log(res.text);
     recordHistory(res.text);
 
-    if (shareId) {
+    if (shareId && !remoteUrl) {
+        const content = fs.readFileSync(filePath, "utf-8");
         await verifyUpdatedContent(shareId, content);
     }
 }

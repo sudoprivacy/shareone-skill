@@ -32,7 +32,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 
 ## 入口隔离规则
 
-本 skill 和用户本机可能安装的 `shareone` CLI 是两个独立入口。除非用户明确要求“使用 CLI”或指定执行 `shareone ...` 命令，否则不要调用系统 PATH 中的 `shareone` 命令。即使 `which shareone` 能找到 CLI，也不要把自然语言的发布、下载、评论处理任务改走 CLI。所有 ShareOne 操作都必须调用本 skill 目录内 `scripts/` 下的脚本。
+本 skill 和用户本机可能安装的 `shareone` CLI 是两个独立入口。除非用户明确要求”使用 CLI”或指定执行 `shareone ...` 命令，否则不要调用系统 PATH 中的 `shareone` 命令。即使 `which shareone` 能找到 CLI，也不要把自然语言的发布、下载、评论处理任务改走 CLI。所有 ShareOne 操作都必须调用本 skill 目录内 `scripts/` 下的脚本。
 
 ## 使用说明与触发条件
 
@@ -54,6 +54,9 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - "给这个 ShareOne 链接加水印：https://s.shareone.vip/s/xxx"
 - "根据这个链接的评论修改页面：https://s.shareone.vip/s/xxx"
 - "修改这个 ShareOne 链接的内容：https://s.shareone.vip/s/xxx"
+- "把这个 GitHub 文件发布到 ShareOne：https://github.com/org/repo/blob/main/report.html"
+- "用远程 URL 发布这个页面"
+- "Publish this GitHub raw URL to ShareOne"
 
 ## 路由判定顺序（唯一路由依据）
 

@@ -41,17 +41,29 @@
 
 ## 5. 首次创建 (POST)
 
+### 5a. 从本地文件创建
+
 执行：
 
 ```bash
 node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true]
 ```
 
+### 5b. 从远程 URL 创建
+
+当用户要求从 GitHub 等远程 URL 发布内容时，使用 `upload_page.js`（不是 `publish.js`，因为没有本地文件供类型检测）的 `--remote-url` 参数。服务端自动拉取内容并存储快照，后续访问时自动检查更新。
+
+```bash
+node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/main/docs/report.html” [--filename “OPTIONAL_NAME”] [--password “OPTIONAL_PASSWORD”] [--slug “OPTIONAL_SLUG”]
+```
+
 规则：
 
-- Sudowork 环境不要传 `--api-key`。
-- 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
-- 只有当用户明确要求“开启评论”、“允许讨论”、“协同模式”等时，才加 `--allow-comments true`。
+- `--remote-url` 与本地文件路径互斥，不能同时使用。
+- 服务端校验 URL 域名是否在白名单内，不支持的域名返回 400 并提示允许的域名列表。GitHub `blob` URL 会自动转换为 raw content URL。
+- `--filename` 可选：未提供时服务端从 URL 路径自动提取。
+- 创建时服务端必须成功 fetch 远程内容，失败返回 400。
+- 远程内容与本地上传内容一样经过 AI 审核。
 - 默认不开启评论。
 - 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
 
