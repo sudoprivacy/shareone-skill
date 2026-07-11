@@ -20,6 +20,7 @@ node scripts/upload_page.js <file>
 node scripts/shareone_upload.js <file>
 node scripts/update_share_settings.js <share_link_or_id>
 node scripts/shareone_api_request.js <api_path>
+node scripts/manage_collaborators.js <share_link_or_id> --action <add|remove|list>
 ```
 
 即使 `which shareone` 能找到 CLI，也不要把自然语言的发布、下载、评论处理任务改走 CLI。
@@ -44,6 +45,12 @@ node scripts/shareone_api_request.js <api_path>
 - "给这个 ShareOne 链接加水印：https://shareone.app/s/xxx"
 - "根据这个链接的评论修改页面：https://shareone.app/s/xxx"
 - "修改这个 ShareOne 链接的内容：https://shareone.app/s/xxx"
+- "给这个 ShareOne 链接添加协作者：https://shareone.app/s/xxx"
+- "Add a collaborator to this share"
+- "列出这个分享链接的协作者"
+- "把这个 GitHub 文件发布到 ShareOne：https://github.com/org/repo/blob/main/report.html"
+- "用远程 URL 发布这个页面"
+- "Publish this GitHub raw URL to ShareOne"
 
 ## 总规则：先路由，再读取子流程
 
@@ -108,6 +115,7 @@ node scripts/shareone_api_request.js "<api_path>" --method POST --data-file body
 | 查看、拉取、总结 ShareOne 链接评论，但用户没有要求修改 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-view.md` |
 | 处理评论、根据评论修改页面、修复 ShareOne 链接内容 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-process.md`，必要时读 `workflows/publish-text-page.md`，最后读 `workflows/result-and-errors.md` |
 | 发布二进制文件，或更新已上传二进制文件的密码/水印 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/publish-binary-file.md`，最后读 `workflows/result-and-errors.md` |
+| 添加、移除协作者，或查看协作者列表 | 先读 `workflows/environment-and-credentials.md`，再读 `workflows/manage-collaborators.md`，最后读 `workflows/result-and-errors.md` |
 
 ## ShareOne 链接与 share_id
 

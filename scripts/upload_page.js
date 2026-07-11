@@ -17,6 +17,7 @@ let watermark = null;
 let shareId = null;
 let allowComments = null;
 let slug = null;
+let remoteUrl = null;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--api-key') {
@@ -33,13 +34,15 @@ for (let i = 0; i < args.length; i++) {
         slug = args[++i];
     } else if (args[i] === '--allow-comments') {
         allowComments = args[++i] === 'true';
+    } else if (args[i] === '--remote-url') {
+        remoteUrl = args[++i];
     } else if (!args[i].startsWith('--')) {
         filePath = args[i];
     }
 }
 
-if (!filePath) {
-    console.error("Usage: node upload_page.js <file_path> [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>]");
+if (!filePath && !remoteUrl) {
+    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--api-key <key>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>]");
     process.exit(1);
 }
 
@@ -60,12 +63,20 @@ async function uploadPage() {
         process.exit(1);
     }
 
-    const content = fs.readFileSync(filePath, "utf-8");
+    let payload;
 
-    const payload = {
-        filename: filename,
-        html_content: content
-    };
+    if (remoteUrl) {
+        // Remote URL mode: server fetches content from the URL
+        payload = { remote_url: remoteUrl };
+        if (filename) payload.filename = filename;
+    } else {
+        // Local file mode: read and upload content
+        const content = fs.readFileSync(filePath, "utf-8");
+        payload = {
+            filename: filename,
+            html_content: content,
+        };
+    }
 
     if (password !== null) payload.password = password;
     if (watermark !== null) payload.watermark = watermark;
@@ -91,7 +102,8 @@ async function uploadPage() {
         }
     }, data);
 
-    if (shareId) {
+    if (shareId && !remoteUrl) {
+        const content = fs.readFileSync(filePath, "utf-8");
         await verifyUpdatedContent(shareId, content);
     }
 

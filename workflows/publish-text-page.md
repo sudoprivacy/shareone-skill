@@ -42,11 +42,29 @@
 
 ## 5. 首次创建 (POST)
 
+### 5a. 从本地文件创建
+
 执行：
 
 ```bash
 node scripts/upload_page.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true]
 ```
+
+### 5b. 从远程 URL 创建
+
+当用户要求从 GitHub 等远程 URL 发布内容时，使用 `--remote-url` 替代本地文件路径。服务端自动拉取内容并存储快照，后续访问时自动检查更新。
+
+```bash
+node scripts/upload_page.js --remote-url "https://github.com/org/repo/blob/main/docs/report.html" [--filename "OPTIONAL_NAME"] [--password "OPTIONAL_PASSWORD"] [--slug "OPTIONAL_SLUG"]
+```
+
+规则：
+
+- `--remote-url` 与本地文件路径互斥，不能同时使用。
+- 服务端校验 URL 域名是否在白名单内，不支持的域名返回 400 并提示允许的域名列表。GitHub `blob` URL 会自动转换为 raw content URL。
+- `--filename` 可选：未提供时服务端从 URL 路径自动提取。
+- 创建时服务端必须成功 fetch 远程内容，失败返回 400。
+- 远程内容与本地上传内容一样经过 AI 审核。
 
 规则：
 
