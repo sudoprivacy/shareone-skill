@@ -17,25 +17,47 @@ let dataFile = null;
 let apiKey = null;
 let publicRequest = false;
 
+function usage() {
+    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>' | --data-file <path|-> ] [--api-key <key>] [--public]");
+    console.error("  --data-file <path>  read the request body from a file ('-' for stdin); preferred for non-ASCII or nested-JSON bodies to avoid shell quoting issues.");
+}
+
+function nextValue(index, flag) {
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith('--')) {
+        console.error(`ERROR:MISSING_VALUE:${flag}`);
+        usage();
+        process.exit(1);
+    }
+    return value;
+}
+
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--method') {
-        method = String(args[++i] || 'GET').toUpperCase();
+        method = String(nextValue(i, args[i])).toUpperCase();
+        i += 1;
     } else if (args[i] === '--data') {
-        data = args[++i];
+        data = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--data-file') {
-        dataFile = args[++i];
+        dataFile = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--api-key') {
-        apiKey = args[++i];
+        apiKey = nextValue(i, args[i]);
+        i += 1;
     } else if (args[i] === '--public') {
         publicRequest = true;
     } else if (!args[i].startsWith('--') && !apiPath) {
         apiPath = args[i];
+    } else {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
+        usage();
+        process.exit(1);
     }
 }
 
 if (!apiPath) {
-    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>' | --data-file <path|-> ] [--api-key <key>] [--public]");
-    console.error("  --data-file <path>  read the request body from a file ('-' for stdin); preferred for non-ASCII or nested-JSON bodies to avoid shell quoting issues.");
+    usage();
     process.exit(1);
 }
 

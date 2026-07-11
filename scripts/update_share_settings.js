@@ -89,7 +89,10 @@ function parseRef(input) {
         if (raw.includes('://')) {
             const parsed = new URL(raw);
             if (!explicitBaseUrl) {
-                process.env.SHAREONE_BASE_URL = `${parsed.protocol}//${parsed.host}`;
+                const host = parsed.hostname.toLowerCase();
+                process.env.SHAREONE_BASE_URL = host === 'shareone.vip' || host.endsWith('.shareone.vip')
+                    ? 'https://shareone.app'
+                    : `${parsed.protocol}//${parsed.host}`;
             }
             path = parsed.pathname;
         }

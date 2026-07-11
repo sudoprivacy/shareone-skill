@@ -74,7 +74,12 @@ function resolveDirectApiKey(explicitApiKey) {
 function saveLocalApiKey(apiKey) {
     const candidates = getCredentialPathCandidates();
     const credentialsPath = candidates.find(canWriteCredentialsPath) || candidates[candidates.length - 1] || getCredentialsPath();
-    fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }));
+    fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }), { mode: 0o600 });
+    try {
+        fs.chmodSync(credentialsPath, 0o600);
+    } catch (_) {
+        // Best-effort on filesystems that do not support POSIX permissions.
+    }
     return credentialsPath;
 }
 
@@ -314,7 +319,14 @@ function getErrorDetail(error) {
     if (!text) return '';
     try {
         const parsed = JSON.parse(text);
-        return String(parsed.detail || parsed.message || text);
+        if (!parsed || typeof parsed !== 'object') {
+            return text;
+        }
+        const detail = parsed.detail;
+        if (detail && typeof detail === 'object') {
+            return String(detail.message || detail.code || parsed.message || text);
+        }
+        return String(detail || parsed.message || text);
     } catch (_) {
         return text;
     }

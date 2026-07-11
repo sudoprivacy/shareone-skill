@@ -2,16 +2,18 @@
 
 当用户只是要求查看、拉取、总结评论时读取本文件。不要修改源文件，不要认领评论，不要关闭评论。
 
-## 1. 获取 share_id
+查看评论走公开接口，**不需要 API Key**，命令统一加 `--public`；只有进入处理评论流程（`comments-process.md`）时才需要凭据。
 
-从用户提供的 ShareOne 链接 `https://shareone.app/s/<share_id>` 中提取 `<share_id>`。
+## 1. 获取 ref
+
+用户提供的目标可以是完整链接、`/s/<ref>` 或 `/md/<ref>` 路径、裸 `share_id` 或自定义短链 slug。取路径最后一段作为 `<REF>` 即可，接口同时接受 `share_id` 和 slug。
 
 ## 2. 查看未处理评论
 
 调用：
 
 ```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments?status=unresolved"
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments?status=unresolved" --public
 ```
 
 `status` 可选值：
@@ -36,7 +38,7 @@ node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments?status=
 如果只想看“现在还有没有未处理的事”，用摘要接口：
 
 ```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/summary"
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/summary" --public
 # -> { total, open, in_progress, resolved, dismissed, last_activity_at }
 ```
 

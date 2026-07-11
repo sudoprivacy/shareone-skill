@@ -9,7 +9,15 @@ const {
 
 // --validate additionally hits GET /api/v1/me with the resolved credential so a
 // revoked/expired key is caught here instead of failing the first real action.
-const validate = process.argv.slice(2).includes('--validate');
+const args = process.argv.slice(2);
+for (const arg of args) {
+    if (arg !== '--validate') {
+        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
+        console.error('Usage: node check_api_key.js [--validate]');
+        process.exit(1);
+    }
+}
+const validate = args.includes('--validate');
 
 async function checkApiKey() {
     const credentialMode = await detectCredentialMode({ refresh: true });

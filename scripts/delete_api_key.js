@@ -8,11 +8,24 @@ const {
     isSudowork,
 } = require('./shareone_client');
 
+if (process.argv.length > 2) {
+    console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[2]}`);
+    console.error('Usage: node delete_api_key.js');
+    process.exit(1);
+}
+
 async function deleteApiKey() {
     const credentialMode = await detectCredentialMode({ refresh: true });
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY) {
-        await deleteSudoworkApiKey();
-        console.log("SUDOWORK_KEY_DELETED");
+        let sudoworkDeleted = true;
+        try {
+            await deleteSudoworkApiKey();
+        } catch (error) {
+            if (error.statusCode !== 404) throw error;
+            sudoworkDeleted = false;
+        }
+        const localDeleted = deleteLocalApiKey();
+        console.log(sudoworkDeleted || localDeleted ? "SUDOWORK_KEY_DELETED" : "KEY_NOT_FOUND");
         return;
     }
 
