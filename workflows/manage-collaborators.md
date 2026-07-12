@@ -13,8 +13,11 @@
 - "列出这个分享链接的协作者"
 - "移除这个链接的某个协作者"
 - "谁有权限访问这个分享链接？"
+- "让别人一起编辑这个页面"
+- "分享编辑权限给同事"
+- "对方怎么拿 API Key？"
 
-如果用户要求添加或移除协作者但没有提供协作者的 API Key，先询问协作者的 API Key。
+如果用户要求添加或移除协作者但没有提供协作者的 API Key，按第 6 节引导对方获取 key。
 
 ## 2. 不要做的事
 
@@ -58,3 +61,31 @@ node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --api-
 ## 5. 下一步
 
 执行完成后读取 `result-and-errors.md`，按返回 JSON 展示结果或错误。
+
+## 6. 协作者如何获取 API Key
+
+当 owner 要添加协作者但对方还没有 API Key 时，按以下场景引导：
+
+### 对方有 AI Agent 且安装了 ShareOne skill
+
+让对方的 agent 执行 `ensure_credentials.js`（或 `ensure_credentials.js --create-guest`）获取 API Key，然后把 key 告诉 owner。owner 用该 key 作为 `--api-keys` 参数添加协作者。
+
+### 对方没有 AI Agent
+
+Owner 的 agent 可以代替对方创建 guest key：
+
+```bash
+node scripts/create_guest_key.js
+```
+
+将返回的 `GUEST_KEY_CREATED:<api_key>` 中的 key 用于添加协作者，并把 key 发送给对方保存。
+
+### 协作者拿到权限后能做什么
+
+- **下载**：用自己的 API Key 调用 `GET /api/v1/shares/{share_id}/download` 下载源内容
+- **编辑更新**：修改内容后用 `PUT /api/v1/pages/{share_id}` 上传更新（只能改内容，不能改密码、水印等设置）
+- **处理评论**：可以解决或关闭评论
+
+### 建议对方绑定邮箱
+
+添加协作者成功后，如果对方使用的是 guest key，建议提醒对方绑定邮箱（按 `workflows/bind-account.md` 流程），以便后续在网站上管理文件。
