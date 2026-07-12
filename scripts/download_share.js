@@ -139,6 +139,11 @@ function emitDownloadInfo(headers) {
     const filename = parseFilenameFromDisposition(headers['content-disposition']);
     if (filename) console.error(`INFO:FILENAME:${filename}`);
     if (headers['content-type']) console.error(`INFO:CONTENT_TYPE:${headers['content-type']}`);
+    const remoteSource = headers['x-remote-source-url'];
+    if (remoteSource) {
+        console.error(`INFO:REMOTE_SOURCE:${remoteSource}`);
+        console.error('HINT:EDIT_AT_SOURCE');
+    }
 }
 
 function sanitizeFilename(name) {
