@@ -72,13 +72,13 @@ node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --api-
 
 ### 对方没有 AI Agent
 
-Owner 的 agent 可以代替对方创建 guest key：
+Owner 的 agent 可以代替对方创建 guest key。**必须使用 `--no-save`**，否则会覆盖 owner 自己的 API Key：
 
 ```bash
-node scripts/create_guest_key.js
+node scripts/create_guest_key.js --no-save
 ```
 
-将返回的 `GUEST_KEY_CREATED:<api_key>` 中的 key 用于添加协作者，并把 key 发送给对方保存。
+将返回的 `GUEST_KEY_CREATED:<api_key>` 中的 key 用于添加协作者，并把 key 发送给对方保存。`--no-save` 表示只创建不保存到本地凭据，避免覆盖 owner 的 key。
 
 ### 协作者拿到权限后能做什么
 

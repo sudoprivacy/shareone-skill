@@ -71,7 +71,29 @@ function resolveDirectApiKey(explicitApiKey) {
     return explicitApiKey || process.env.SHAREONE_API_KEY || readLocalApiKey();
 }
 
-function saveLocalApiKey(apiKey) {
+/**
+ * Save an API key to local credentials file.
+ *
+ * By default, refuses to overwrite an existing key with a *different* key.
+ * Pass `{ force: true }` to allow overwriting (e.g. when the user explicitly
+ * provides a new key via `--key`).
+ *
+ * Returns the path where the key was saved.
+ * Throws if overwrite is blocked.
+ */
+function saveLocalApiKey(apiKey, { force = false } = {}) {
+    if (!force) {
+        const existing = readLocalApiKey();
+        if (existing && existing !== apiKey) {
+            const error = new Error(
+                'EXISTING_KEY_CONFLICT: A different API Key is already saved. '
+                + 'Use --key to explicitly replace it, or delete the existing key first.'
+            );
+            error.code = 'EXISTING_KEY_CONFLICT';
+            error.existingKeyHint = existing.slice(0, 4) + '...' + existing.slice(-4);
+            throw error;
+        }
+    }
     const candidates = getCredentialPathCandidates();
     const credentialsPath = candidates.find(canWriteCredentialsPath) || candidates[candidates.length - 1] || getCredentialsPath();
     fs.writeFileSync(credentialsPath, JSON.stringify({ api_key: apiKey }), { mode: 0o600 });

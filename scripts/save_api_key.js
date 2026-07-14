@@ -25,7 +25,7 @@ async function saveApiKey() {
             console.log("SUDOWORK_KEY_SAVED");
             return;
         } catch (error) {
-            saveLocalApiKey(apiKey);
+            saveLocalApiKey(apiKey, { force: true });
             console.log("SUDOWORK_FALLBACK_KEY_SAVED");
             console.log("Auth Proxy 设置 ShareOne API Key 失败，已暂时保存到 ShareOne 本地 fallback 凭证。");
             if (error && error.message) {
@@ -35,7 +35,7 @@ async function saveApiKey() {
         }
     }
 
-    saveLocalApiKey(apiKey);
+    saveLocalApiKey(apiKey, { force: true });
     if (isSudowork()) {
         console.log("SUDOWORK_FALLBACK_KEY_SAVED");
         return;
