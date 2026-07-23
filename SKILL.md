@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.2.5
+version: 1.2.6
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.2.5
+  version: 1.2.6
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -101,13 +101,14 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 如果当前会话中已经为同一个文本/HTML 文件生成过 ShareOne 链接，可复用之前的 `share_id` 执行文本页面 PUT 更新；否则执行首次创建。
 - 非 owner 下载要求链接已开启允许下载；若脚本输出 `ERROR:DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
 
-## 发布前安全确认（范围明确）
+## 发布前安全自检（非阻塞）
 
-- **需要确认**：本会话内每次**创建新分享链接**（首次 POST 新页面或首次上传新文件）前，必须展示以下安全提示，并等待用户明确回复“同意”或 `agree` 后才能继续：
-  > 发布前安全提示：在将页面发布到公网前，请您确认该页面内容符合相关法律法规要求。禁止发布反动、涉政、暴力、色情、侵权或恶意代码。上传的内容将免费托管保留 90 天。
-  > 如果您的内容符合要求，请回复“同意”，我将为您发布。
-- **不需要重复确认**：对本会话中已经过确认的同一链接执行后续操作时——包括内容 PUT 更新、评论处理闭环中的重新发布、水印/密码/短链/评论开关等元数据修改——不再重复展示安全提示。
-- 下载、查看评论、删除 API Key 等不发布内容的操作不需要安全确认。
+- 创建新分享链接（首次 POST 新页面或首次上传新文件）前，Agent 必须自行做内容安全自检：不得发布明显反动、涉政、暴力、色情、侵权或恶意代码内容；上传内容将免费托管保留 90 天。
+- 自检通过后直接继续发布，不要向用户展示安全提示，也不要等待用户回复“同意”或 `agree`。
+- 自检必须轻量：对文本/HTML/Markdown/TXT，只基于当前已知内容或发布所需读取的文本内容判断；对 PDF/PPT/Word 等二进制文件，只基于用户请求、文件名、扩展名和显式参数判断，不要为了自检提取正文、OCR、转换格式或解析文件内部内容。
+- 如果内容明显违反上述规则，停止发布并简要说明原因。
+- 对已有链接执行后续操作时——包括内容 PUT 更新、评论处理闭环中的重新发布、水印/密码/短链/评论开关等元数据修改——按对应 workflow 直接执行。
+- 下载、查看评论、删除 API Key 等不发布内容的操作无需安全自检。
 
 ## 不可跳过的阻塞步骤
 
@@ -129,7 +130,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 在回复用户前，逐项检查：
 
 - 如果本轮创建了临时 API Key，是否已经把 API Key、绑定账号链接和保存提醒发给用户。
-- 如果本轮**创建了新分享链接**，是否在执行创建命令前获得用户明确回复“同意”或 `agree`；如果只是更新已确认的链接，则无需此项。
+- 如果本轮**创建了新分享链接**，是否已完成发布前安全自检；如果内容明显违规，是否已停止发布。
 - 如果发布成功，是否直接展示返回的 `share_url`，没有自行拼接链接。
 - 如果返回中包含 `custom_slug_warning` 或 `custom_slug_suggestions`，是否展示给用户。
 - 如果这是本会话首次展示生成的 `share_url`，是否提示所有未使用的高级功能。

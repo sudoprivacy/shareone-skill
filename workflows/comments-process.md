@@ -10,6 +10,8 @@ ShareOne 页面评论包含状态机字段 `status`：`open` / `in_progress` / `
 
 用户提供的目标可以是完整链接、`/s/<ref>` 或 `/md/<ref>` 路径、裸 `share_id` 或自定义短链 slug。取路径最后一段作为 `<REF>` 即可，接口同时接受 `share_id` 和 slug。
 
+本 workflow 只适用于可编辑的文本/HTML/Markdown 页面评论处理。若目标链接路径明确是 `/pdf/`、`/ppt/`、`/word/`，或下载后的 `INFO:CONTENT_TYPE`/文件扩展名显示为 PDF/PPT/Word 等二进制文档，不要为处理评论解析、转换或修改二进制正文；停止内容修改流程，并告知用户当前 skill 只支持处理页面源码评论，二进制文档只能查看/总结评论或更新元数据设置。
+
 任务锚点：步骤 2 的下载命令（`--task-anchor`）会自动把 `<REF>` 写入当前目录的 `.shareone_active_task` 文件，把目标 share 固定到磁盘上（防止长时间编辑文件后上下文丢失，误把更新发成新链接）。后续所有步骤中的 `<REF>` 都以该文件内容为准；任何时候不确定目标 share 是哪个，读取该文件，**不要凭记忆，更不要新建链接**。
 
 先获取未处理评论：
@@ -69,7 +71,7 @@ node scripts/publish.js "<步骤 2 SAVED: 给出的本地文件>" --filename "<I
 - 如果此刻想不起 `share_id`，读取 `.shareone_active_task` 文件或源文件名中的 `shareone_<REF>_` 前缀，绝不新建。
 - 如果脚本输出 `ERROR:ACTIVE_SHARE_TASK`，说明漏传了 `--share-id`，按错误提示补上后重试。
 
-评论闭环中的重新发布属于对已确认链接的更新，**不需要**再次向用户展示发布前安全提示（规则见入口 `SKILL.md`）。
+评论闭环中的重新发布属于对已有链接的更新，**不需要**向用户展示发布前安全提示或等待确认（规则见入口 `SKILL.md`）。
 
 ### 步骤 5：写回复并关闭评论（一条命令）
 

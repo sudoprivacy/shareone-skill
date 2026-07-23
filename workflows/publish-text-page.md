@@ -18,9 +18,9 @@
 - 如果锁定的文件是 `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`，停止本 workflow，改读 `publish-binary-file.md`。
 - 提取用户可能要求的密码 (`password`)、水印 (`watermark`) 和自定义短链接后缀 (`slug`)。服务端会根据文件名自动生成可读的 slug，客户端无需主动设置。只有用户明确说”链接叫 xxx / 自定义短链接 xxx / URL 后缀 xxx”时才用 `--slug` 覆盖。
 
-## 2. 发布前安全确认
+## 2. 发布前安全自检
 
-发布前安全提示由入口 `SKILL.md` 统一描述：**首次创建新分享链接（POST）**前必须展示安全提示并获得用户明确回复“同意”或 `agree`；对本会话中已确认链接的 PUT 更新（含评论处理闭环中的重新发布）不需要重复确认。
+发布前安全自检由入口 `SKILL.md` 统一描述：**首次创建新分享链接（POST）**前由 Agent 自行检查内容是否明显违规；自检通过后直接继续发布，不要展示安全提示，也不要等待用户回复“同意”或 `agree`。自检只基于当前已知内容或发布所需读取的文本内容，不要增加额外转换步骤。PUT 更新（含评论处理闭环中的重新发布）按对应规则直接执行。
 
 ## 3. 判断创建还是更新
 
@@ -52,6 +52,8 @@ node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--passwo
 ### 5b. 从远程 URL 创建
 
 当用户要求从 GitHub 等远程 URL 发布内容时，使用 `upload_page.js`（不是 `publish.js`，因为没有本地文件供类型检测）的 `--remote-url` 参数。服务端自动拉取内容并存储快照，后续访问时自动检查更新。
+
+远程 URL 发布的安全自检只基于用户请求、URL、文件名和显式参数；除非远程内容已经在当前上下文中，不要为了自检主动 fetch、下载、解析或转换远程内容。深度内容检查由服务端拉取后的审核负责。
 
 ```bash
 node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/main/docs/report.html” [--filename “OPTIONAL_NAME”] [--password “OPTIONAL_PASSWORD”] [--slug “OPTIONAL_SLUG”]
