@@ -103,7 +103,21 @@ function appendPath(baseUrl, apiPath) {
     return `${trimmedBase}${normalizedPath}`;
 }
 
-function requestBuffer(url, options = {}, body = null) {
+const MAX_REDIRECTS = 5;
+
+// Header names that carry credentials; stripped when a redirect crosses hosts
+// so we never hand the API key to a different origin.
+const AUTH_HEADER_NAMES = ['x-api-key', 'authorization'];
+
+function stripAuthHeaders(headers) {
+    const next = {};
+    for (const key of Object.keys(headers || {})) {
+        if (!AUTH_HEADER_NAMES.includes(key.toLowerCase())) next[key] = headers[key];
+    }
+    return next;
+}
+
+function requestBuffer(url, options = {}, body = null, redirectsLeft = MAX_REDIRECTS) {
     return new Promise((resolve, reject) => {
         const target = new URL(url);
         const client = target.protocol === 'https:' ? https : http;
@@ -111,6 +125,26 @@ function requestBuffer(url, options = {}, body = null) {
             method: options.method || 'GET',
             headers: options.headers || {},
         }, (res) => {
+            // Follow redirects — Node's http client does not auto-follow, so a
+            // bare `curl` would succeed where this used to surface the 3xx as an
+            // error (e.g. an infra http->https / trailing-slash 301 on a DELETE).
+            // Preserve the method and body (API redirects are transport-level,
+            // not a POST->GET downgrade); drop the API key on a cross-host hop.
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
+                res.resume(); // drain so the socket can be reused
+                let nextUrl;
+                try {
+                    nextUrl = new URL(res.headers.location, target);
+                } catch (_) {
+                    nextUrl = null;
+                }
+                if (nextUrl) {
+                    const sameHost = nextUrl.host === target.host;
+                    const headers = sameHost ? (options.headers || {}) : stripAuthHeaders(options.headers || {});
+                    resolve(requestBuffer(nextUrl.toString(), { ...options, headers }, body, redirectsLeft - 1));
+                    return;
+                }
+            }
             const chunks = [];
             res.on('data', chunk => chunks.push(Buffer.from(chunk)));
             res.on('end', () => {
