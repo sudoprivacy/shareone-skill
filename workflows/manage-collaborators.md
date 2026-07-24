@@ -17,7 +17,7 @@
 - "分享编辑权限给同事"
 - "对方怎么拿 API Key？"
 
-如果用户要求添加或移除协作者但没有提供协作者的 API Key，按第 6 节引导对方获取 key。
+如果用户要求添加或移除协作者但没有对方的 username，按第 6 节引导对方获取。
 
 ## 2. 不要做的事
 
@@ -36,20 +36,20 @@ node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action list
 ### 添加协作者
 
 ```bash
-node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action add --api-keys "key1,key2"
+node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action add --usernames "user1,user2"
 ```
 
 ### 移除协作者
 
 ```bash
-node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --api-keys "key1,key2"
+node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --usernames "user1,user2"
 ```
 
 规则：
 
 - Sudowork 环境不要传 `--api-key`。
 - 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
-- `--api-keys` 参数为要添加或移除的协作者的 API Key，多个用逗号分隔。
+- `--usernames` 参数为要添加或移除的协作者的 **username**（不是 API Key），多个用逗号分隔。协作者可以通过 `GET /api/v1/me` 查看自己的 username。
 - 脚本会自动从完整 URL、`/s/<ref>` 路径、裸 `share_id` 或 slug 中解析目标。
 
 ## 4. 结果解读
@@ -62,23 +62,23 @@ node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --api-
 
 执行完成后读取 `result-and-errors.md`，按返回 JSON 展示结果或错误。
 
-## 6. 协作者如何获取 API Key
+## 6. 协作者如何提供 username
 
-当 owner 要添加协作者但对方还没有 API Key 时，按以下场景引导：
+添加协作者只需要对方的 **username**（公开标识），不需要 API Key（私密凭证）。
 
-### 对方有 AI Agent 且安装了 ShareOne skill
+### 对方有 AI Agent
 
-让对方的 agent 执行 `ensure_credentials.js`（或 `ensure_credentials.js --create-guest`）获取 API Key，然后把 key 告诉 owner。owner 用该 key 作为 `--api-keys` 参数添加协作者。
+让对方的 agent 调用 `GET /api/v1/me`（需要凭据）查看自己的 username，然后把 username 告诉 owner。
 
 ### 对方没有 AI Agent
 
-Owner 的 agent 可以代替对方创建 guest key。**必须使用 `--no-save`**，否则会覆盖 owner 自己的 API Key：
+Owner 的 agent 可以代替对方创建 guest 账号。**必须使用 `--no-save`**，否则会覆盖 owner 自己的 API Key：
 
 ```bash
 node scripts/create_guest_key.js --no-save
 ```
 
-将返回的 `GUEST_KEY_CREATED:<api_key>` 中的 key 用于添加协作者，并把 key 发送给对方保存。`--no-save` 表示只创建不保存到本地凭据，避免覆盖 owner 的 key。
+将返回的 key 发给对方保存。guest 用户的 username 是自动生成的（如 `guest_e7ead86a`），owner 需要知道这个 username 才能添加协作者。对方的 agent 用该 key 调 `GET /api/v1/me` 获取 username 后告知 owner。
 
 ### 协作者拿到权限后能做什么
 
