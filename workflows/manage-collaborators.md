@@ -14,7 +14,7 @@
 - "移除这个链接的某个协作者"
 - "谁有权限访问这个分享链接？"
 
-如果用户要求添加或移除协作者但没有提供协作者的 API Key，先询问协作者的 API Key。
+协作者按 ShareOne **用户名**标识（不是 API Key）——这是安全设计，避免在协作管理里传递密钥。如果用户要求添加或移除协作者但没有提供协作者的用户名，先询问协作者的用户名。协作者可在自己的设置页或通过 `GET /api/v1/me` 查到自己的用户名。
 
 ## 2. 不要做的事
 
@@ -33,20 +33,20 @@ node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action list
 ### 添加协作者
 
 ```bash
-node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action add --api-keys "key1,key2"
+node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action add --usernames "alice,bob"
 ```
 
 ### 移除协作者
 
 ```bash
-node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --api-keys "key1,key2"
+node scripts/manage_collaborators.js "<SHARE_LINK_OR_ID>" --action remove --usernames "alice,bob"
 ```
 
 规则：
 
 - Sudowork 环境不要传 `--api-key`。
 - 普通 AI Agent 环境可传 `--api-key`，也可以依赖 `SHAREONE_API_KEY` 或本地凭证。
-- `--api-keys` 参数为要添加或移除的协作者的 API Key，多个用逗号分隔。
+- `--usernames` 参数为要添加或移除的协作者的 ShareOne 用户名，多个用逗号分隔。
 - 脚本会自动从完整 URL、`/s/<ref>` 路径、裸 `share_id` 或 slug 中解析目标。
 
 ## 4. 结果解读

@@ -14,11 +14,12 @@ const args = process.argv.slice(2);
 let ref = null;
 let apiKey = null;
 let action = null;
-let apiKeys = [];
+let usernames = [];
 let explicitBaseUrl = null;
 
 function usage() {
-    console.error('Usage: node manage_collaborators.js <share_link_or_id> --action <add|remove|list> [--api-keys <key1,key2>] [--api-key <owner_key>] [--base-url <url>]');
+    console.error('Usage: node manage_collaborators.js <share_link_or_id> --action <add|remove|list> [--usernames <name1,name2>] [--api-key <owner_key>] [--base-url <url>]');
+    console.error('  协作者按 ShareOne 用户名标识（不是 API Key）。');
 }
 
 function nextValue(index, flag) {
@@ -43,8 +44,8 @@ for (let i = 0; i < args.length; i++) {
     } else if (arg === '--action') {
         action = nextValue(i, arg);
         i += 1;
-    } else if (arg === '--api-keys') {
-        apiKeys = nextValue(i, arg).split(',').map(k => k.trim()).filter(Boolean);
+    } else if (arg === '--usernames') {
+        usernames = nextValue(i, arg).split(',').map(k => k.trim()).filter(Boolean);
         i += 1;
     } else if (!arg.startsWith('--') && !ref) {
         ref = arg;
@@ -74,9 +75,9 @@ if (!validActions.has(action)) {
     process.exit(1);
 }
 
-if ((action === 'add' || action === 'remove') && apiKeys.length === 0) {
-    console.error(`ERROR:MISSING_API_KEYS`);
-    console.error(`--api-keys is required for --action ${action}.`);
+if ((action === 'add' || action === 'remove') && usernames.length === 0) {
+    console.error(`ERROR:MISSING_USERNAMES`);
+    console.error(`--usernames is required for --action ${action}.`);
     process.exit(1);
 }
 
@@ -132,8 +133,8 @@ function parseRef(input) {
     }
 
     const payload = action === 'add'
-        ? { add_collaborators: apiKeys }
-        : { remove_collaborators: apiKeys };
+        ? { add_collaborators: usernames }
+        : { remove_collaborators: usernames };
 
     const result = await requestShareOneJson(apiPath, {
         method: 'POST',
