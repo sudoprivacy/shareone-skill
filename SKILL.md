@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.2.6
+version: 1.2.7
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.2.6
+  version: 1.2.7
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
