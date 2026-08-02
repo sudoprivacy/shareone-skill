@@ -18,12 +18,13 @@ let password = null;
 let watermark = null;
 let shareId = null;
 let allowComments = null;
+let allowData = null;
 let slug = null;
 let remoteUrl = null;
 let forceNew = false;
 
 function usage() {
-    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--force-new]");
+    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--allow-data <true|false>] [--force-new]");
 }
 
 function nextValue(index, flag) {
@@ -68,6 +69,9 @@ for (let i = 0; i < args.length; i++) {
         i += 1;
     } else if (args[i] === '--allow-comments') {
         allowComments = parseBoolean(nextValue(i, args[i]), args[i]);
+        i += 1;
+    } else if (args[i] === '--allow-data') {
+        allowData = parseBoolean(nextValue(i, args[i]), args[i]);
         i += 1;
     } else if (args[i] === '--remote-url') {
         remoteUrl = nextValue(i, args[i]);
@@ -167,6 +171,9 @@ async function uploadPage() {
 
     if (allowComments !== null) {
         payload.allow_comments = allowComments;
+    }
+    if (allowData !== null) {
+        payload.allow_data = allowData;
     }
 
     const data = JSON.stringify(payload);

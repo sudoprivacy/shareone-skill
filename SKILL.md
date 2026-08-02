@@ -80,7 +80,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 3. **刷新 remote-url auto-follow 分享的源内容（用户说“我 push 了”“拉一下最新源”“刷新这个远程链接”）**
    → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/refresh-remote.md`。remote 页面刷新是懒的、只在打开渲染页时触发，下载/`/file` 只服务缓存；本条用 `refresh_share.js` 显式强制 refetch。仅对绑定了远程 URL 的分享有效；非 remote-bound 返回 `NOT_REMOTE_BOUND`，此时应改走第 4 或第 8 条（改设置 / 重新发布内容）。
 
-4. **用户提供已有 ShareOne 链接、`share_id` 或 slug，且只要求修改水印、访问密码、自定义短链接或评论开关（不改内容本身）**
+4. **用户提供已有 ShareOne 链接、`share_id` 或 slug，且只要求修改水印、访问密码、自定义短链接、评论开关或数据存储开关（不改内容本身）**
    → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/update-share-settings.md`，最后读 `workflows/result-and-errors.md`。
    这是元数据更新：不要按文件类型路由，不要下载源文件，不要使用 `publish.js`，不要重新上传内容。对二进制文件链接（`/pdf/`、`/ppt/`、`/word/`）同样适用本条。
 
@@ -130,6 +130,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 发布前必须完成凭据检查和必要的凭据配置。
 - 发布成功后必须直接使用脚本返回的 `share_url`，不要自行拼接分享链接；不要展示备用链接。
 - 只有当用户明确要求开启评论、允许讨论或协同模式时，才添加 `--allow-comments true`。默认不开启评论。
+- 只有当用户明确要求页面持久化数据（如保存游戏分数、表单状态）时，才添加 `--allow-data true`。默认不开启数据存储。
 - 自定义短链接（slug）：服务端会根据文件名自动生成可读的 slug（如 `quarterly-report`），客户端无需额外操作。只有用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”时，才在发布命令添加 `--slug xxx` 覆盖自动生成；slug 冲突时把服务端提示反馈给用户，不要静默改名。
 - 评论处理必须形成闭环：认领、修改、重新发布、回复、关闭或 dismiss。
 

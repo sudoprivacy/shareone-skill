@@ -46,7 +46,7 @@
 执行：
 
 ```bash
-node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true]
+node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true] [--allow-data true]
 ```
 
 ### 5b. 从远程 URL 创建
@@ -76,13 +76,14 @@ node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/mai
 执行：
 
 ```bash
-node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true/false]
+node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-id <YOUR_SHARE_ID> [--password "OPTIONAL_PASSWORD"] [--watermark "OPTIONAL_WATERMARK"] [--slug "OPTIONAL_SLUG"] [--allow-comments true/false] [--allow-data true/false]
 ```
 
 规则：
 
 - Sudowork 环境不要传 `--api-key`。
 - 如果用户要求关闭评论协同或开启评论协同，可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
+- 如果用户要求页面持久化数据（游戏分数、表单状态等），传入 `--allow-data true`。
 - 如果用户要求修改或清除密码/水印，可以传入 `--password` 或 `--watermark`。
 - 如果用户要求修改自定义短链接，可以传入 `--slug`。
 - 空字符串 `""` 表示清除对应设置。

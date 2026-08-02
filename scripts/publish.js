@@ -10,7 +10,7 @@ const { spawnSync } = require('child_process');
 const TEXT_EXTENSIONS = new Set(['.html', '.htm', '.md', '.markdown', '.txt']);
 
 function usage() {
-    console.error('Usage: node publish.js <file_path> [--filename <name>] [--password <pwd>] [--watermark <wm>] [--slug <slug>] [--share-id <id>] [--allow-comments <true|false>] [--content-type <mime>] [--base-url <url>] [--api-key <key>] [--force-new]');
+    console.error('Usage: node publish.js <file_path> [--filename <name>] [--password <pwd>] [--watermark <wm>] [--slug <slug>] [--share-id <id>] [--allow-comments <true|false>] [--allow-data <true|false>] [--content-type <mime>] [--base-url <url>] [--api-key <key>] [--force-new]');
 }
 
 function looksBinary(filePath) {
@@ -29,7 +29,7 @@ function looksBinary(filePath) {
 
 const VALUE_FLAGS = new Set([
     '--api-key', '--filename', '--password', '--watermark',
-    '--share-id', '--slug', '--allow-comments', '--content-type', '--base-url',
+    '--share-id', '--slug', '--allow-comments', '--allow-data', '--content-type', '--base-url',
 ]);
 const BOOL_FLAGS = new Set(['--force-new']);
 
@@ -89,7 +89,7 @@ if (channel === 'text') {
         console.error('文本页面通道不支持 --content-type；该选项只用于二进制文件上传。');
         process.exit(1);
     }
-    for (const flag of ['--filename', '--password', '--watermark', '--share-id', '--slug', '--allow-comments', '--base-url', '--api-key']) {
+    for (const flag of ['--filename', '--password', '--watermark', '--share-id', '--slug', '--allow-comments', '--allow-data', '--base-url', '--api-key']) {
         if (options[flag] !== undefined) targetArgs.push(flag, options[flag]);
     }
     if (boolOptions.has('--force-new')) targetArgs.push('--force-new');
@@ -102,6 +102,11 @@ if (channel === 'text') {
     if (options['--allow-comments'] !== undefined) {
         console.error('ERROR:BINARY_NO_ALLOW_COMMENTS');
         console.error('二进制文件上传时不支持 --allow-comments；请先上传，再用 update_share_settings.js "<share_url>" --allow-comments true 开启评论。');
+        process.exit(1);
+    }
+    if (options['--allow-data'] !== undefined) {
+        console.error('ERROR:BINARY_NO_ALLOW_DATA');
+        console.error('二进制文件上传时不支持 --allow-data；请先上传，再用 update_share_settings.js "<share_url>" --allow-data true 开启数据存储。');
         process.exit(1);
     }
     for (const flag of ['--filename', '--password', '--watermark', '--slug', '--content-type', '--base-url', '--api-key']) {

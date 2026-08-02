@@ -17,7 +17,7 @@ let explicitBaseUrl = null;
 const payload = {};
 
 function usage() {
-    console.error('Usage: node update_share_settings.js <share_link_or_id> [--api-key <key>] [--base-url <url>] [--watermark <text>] [--password <pwd>] [--slug <slug>] [--allow-comments <true|false>] [--dry-run]');
+    console.error('Usage: node update_share_settings.js <share_link_or_id> [--api-key <key>] [--base-url <url>] [--watermark <text>] [--password <pwd>] [--slug <slug>] [--allow-comments <true|false>] [--allow-data <true|false>] [--dry-run]');
 }
 
 function nextValue(index, flag) {
@@ -59,6 +59,9 @@ for (let i = 0; i < args.length; i++) {
     } else if (arg === '--allow-comments') {
         payload.allow_comments = parseBoolean(nextValue(i, arg), arg);
         i += 1;
+    } else if (arg === '--allow-data') {
+        payload.allow_data = parseBoolean(nextValue(i, arg), arg);
+        i += 1;
     } else if (arg === '--dry-run') {
         dryRun = true;
     } else if (!arg.startsWith('--') && !ref) {
@@ -77,7 +80,7 @@ if (!ref) {
 
 if (Object.keys(payload).length === 0) {
     console.error('ERROR:NO_SETTINGS_PROVIDED');
-    console.error('Provide at least one of --watermark, --password, --slug, or --allow-comments.');
+    console.error('Provide at least one of --watermark, --password, --slug, --allow-comments, or --allow-data.');
     process.exit(1);
 }
 
