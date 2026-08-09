@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
-// 评论闭环的“回复 + 关闭”一体脚本：自动从父评论继承 quote/highlighter_data，
-// 先 POST 一条 author_role=agent 的回复，再把父评论状态置为 resolved 或 dismissed。
-// 模型不需要手工拼接含 highlighter_data 的多层转义 JSON。
+// AI 回复评论的「强制表态」脚本：回复的同时必须声明一个 --state，杜绝“只回复不收
+// 敛”。自动从父评论继承 quote/highlighter_data，POST 一条 author_role=agent 的回复
+// 并带上 state；后端据此原子地设置父评论的状态与 AI 立场。AI 永不 dismiss 分歧：
+//   resolved-agree   充分理解且同意 → 收敛为 resolved
+//   open-disagree    已阐述反对理由，但保持 open，把是否关闭交回给提出者
+//   open-need-input  需要人类进一步澄清 → 保持 open
 
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
@@ -12,9 +15,14 @@ const {
     resolveDirectApiKey,
 } = require('./shareone_client');
 
+const STATES = ['resolved-agree', 'open-disagree', 'open-need-input'];
+
 function usage() {
-    console.error('Usage: node comment_resolve.js <share_link_or_ref> <comment_id> --reply "<回复内容>" [--note "<处理说明>"] [--api-key <key>]');
-    console.error('       node comment_resolve.js <share_link_or_ref> <comment_id> --dismiss --note "<原因>" [--reply "<回复内容>"] [--api-key <key>]');
+    console.error('Usage: node comment_reply.js <share_link_or_ref> <comment_id> --content "<回复内容>" --state <resolved-agree|open-disagree|open-need-input> [--api-key <key>]');
+    console.error('  --state 必填，无默认；缺省即报错：');
+    console.error('    resolved-agree   同意并已处理 → 评论收敛为 resolved');
+    console.error('    open-disagree    不同意（--content 里写清理由），但保持 open，把关闭权交回提出者（AI 不 dismiss）');
+    console.error('    open-need-input  需要人类澄清 → 保持 open');
 }
 
 function extractShareRef(value) {
@@ -34,19 +42,16 @@ function extractShareRef(value) {
 const args = process.argv.slice(2);
 let ref = null;
 let commentId = null;
-let reply = null;
-let note = null;
-let dismiss = false;
+let content = null;
+let state = null;
 let apiKey = null;
 
 for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === '--reply') {
-        reply = args[++i];
-    } else if (arg === '--note') {
-        note = args[++i];
-    } else if (arg === '--dismiss') {
-        dismiss = true;
+    if (arg === '--content') {
+        content = args[++i];
+    } else if (arg === '--state') {
+        state = args[++i];
     } else if (arg === '--api-key') {
         apiKey = args[++i];
     } else if (!arg.startsWith('--') && !ref) {
@@ -65,15 +70,23 @@ if (!ref || !commentId) {
     process.exit(1);
 }
 
-if (!dismiss && !reply) {
-    console.error('ERROR:REPLY_REQUIRED');
-    console.error('resolved 闭环要求先给访问者一条回复。请用 --reply 说明改了什么；如果这条评论无法处理或与页面无关，请改用 --dismiss --note "<原因>"。');
+if (!content) {
+    console.error('ERROR:CONTENT_REQUIRED');
+    console.error('回复评论必须用 --content 给出回复内容。');
+    usage();
     process.exit(1);
 }
 
-if (dismiss && !note) {
-    console.error('ERROR:NOTE_REQUIRED');
-    console.error('dismissed 闭环要求用 --note 说明无法处理或无需处理的原因。');
+if (!state) {
+    console.error('ERROR:STATE_REQUIRED');
+    console.error('回复评论必须用 --state 明确表态（无默认）。这样才能避免“只回复不收敛/分歧没 signal 出来”。见 usage。');
+    usage();
+    process.exit(1);
+}
+
+if (!STATES.includes(state)) {
+    console.error(`ERROR:INVALID_STATE:${state}`);
+    console.error(`--state 只能是其一：${STATES.join(', ')}`);
     process.exit(1);
 }
 
@@ -102,7 +115,7 @@ if (dismiss && !note) {
             const asReply = (c.replies || []).find(r => String(r.id) === wantedId);
             if (asReply) {
                 console.error(`ERROR:IS_REPLY:${c.id}`);
-                console.error(`评论 ${wantedId} 是一条回复，状态只能对父评论操作。请改用父评论 ID ${c.id} 重新执行。`);
+                console.error(`评论 ${wantedId} 是一条回复；表态只能对父评论操作。请改用父评论 ID ${c.id} 重新执行。`);
                 process.exit(1);
             }
         }
@@ -111,33 +124,19 @@ if (dismiss && !note) {
         process.exit(1);
     }
 
-    if (reply) {
-        const posted = await requestShareOneJson(`/api/v1/shares/${shareRef}/comments`, {
-            method: 'POST',
-            apiKey,
-        }, {
-            parent_id: parent.id,
-            quote: parent.quote,
-            highlighter_data: parent.highlighter_data,
-            content: reply,
-            author_role: 'agent',
-            // Agent replies now require an explicit state (server-enforced). This
-            // legacy resolve/dismiss script maps to the closest state; the status
-            // PUT below still finalizes to resolved/dismissed. For nuanced replies
-            // (esp. disagreement that should stay open) prefer comment_reply.js.
-            state: dismiss ? 'open-disagree' : 'resolved-agree',
-        });
-        console.log(`REPLY_POSTED:${posted && posted.id !== undefined ? posted.id : ''}`);
-    }
-
-    const status = dismiss ? 'dismissed' : 'resolved';
-    const payload = { status };
-    if (note !== null) payload.note = note;
-    await requestShareOneJson(`/api/v1/shares/${shareRef}/comments/${encodeURIComponent(wantedId)}/status`, {
-        method: 'PUT',
+    const posted = await requestShareOneJson(`/api/v1/shares/${shareRef}/comments`, {
+        method: 'POST',
         apiKey,
-    }, payload);
-    console.log(dismiss ? `COMMENT_DISMISSED:${wantedId}` : `COMMENT_RESOLVED:${wantedId}`);
+    }, {
+        parent_id: parent.id,
+        quote: parent.quote,
+        highlighter_data: parent.highlighter_data,
+        content,
+        author_role: 'agent',
+        state,
+    });
+    console.log(`REPLY_POSTED:${posted && posted.id !== undefined ? posted.id : ''}`);
+    console.log(`COMMENT_STATE:${state}`);
 })().catch((error) => {
     printShareOneScriptError(error);
     process.exit(1);
