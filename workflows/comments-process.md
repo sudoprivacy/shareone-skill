@@ -73,17 +73,30 @@ node scripts/publish.js "<步骤 2 SAVED: 给出的本地文件>" --filename "<I
 
 评论闭环中的重新发布属于对已有链接的更新，**不需要**向用户展示发布前安全提示或等待确认（规则见入口 `SKILL.md`）。
 
-### 步骤 5：写回复并关闭评论（一条命令）
+### 步骤 5：回复评论并**强制表态**（一条命令，`--state` 必填）
+
+每次回复评论都**必须**用 `comment_reply.js` 并声明一个 `--state`——这是硬性要求（缺省即报错），目的是杜绝“只回复不收敛 / 有分歧却没 signal 出来 / 不确定却没保持 open”这三种失败模式：
 
 ```bash
-node scripts/comment_resolve.js "<REF>" <COMMENT_ID> --reply "已按你的建议把标题改成 ...，并调整了 ..." --note "已采纳，见最新版本"
+# 同意并已按建议修改 → 评论收敛为 resolved
+node scripts/comment_reply.js "<REF>" <COMMENT_ID> --content "已按你的建议把标题改成 ...，并调整了 ..." --state resolved-agree
 ```
 
-脚本会原子地完成闭环的最后两步：自动从父评论继承 `quote` 和 `highlighter_data`、以 `author_role=agent` 发一条回复（输出 `REPLY_POSTED:<id>`），再把父评论状态置为 `resolved`（输出 `COMMENT_RESOLVED:<id>`）。不要手工拼接含 `highlighter_data` 的 JSON。
+`--state` 三选一（无默认）：
 
-- `--reply` 是访问者在侧栏看到的 AI 徽标蓝色回复，写清楚改了什么；`--note` 会作为绿色“AI 已处理: ...”高亮区块显示在评论卡片底部。
-- 如果输出 `ERROR:IS_REPLY:<parent_id>`，说明传入的是回复 ID，按提示改用父评论 ID 重试。
-- 如果输出 `ERROR:AUTH_FAILED`（403），先检查该链接的评论功能是否已被关闭（`allow_comments=false`）：可通过 `update-share-settings.md` 重新开启评论后重试，或告知用户评论已关闭、无法写回复。
+| state | 含义 | 对父评论的作用 |
+|---|---|---|
+| `resolved-agree` | 充分理解且同意，已处理 | 置 `resolved` |
+| `open-disagree` | 不同意（在 `--content` 里写清理由） | **保持 `open`**，标记“AI 有异议”，把是否关闭交回给提出者 |
+| `open-need-input` | 需要人类进一步澄清/输入 | 保持 `open` |
+
+脚本会自动从父评论继承 `quote`/`highlighter_data`、以 `author_role=agent` 发一条回复（输出 `REPLY_POSTED:<id>` 和 `COMMENT_STATE:<state>`），后端据 `--state` 原子地设置父评论状态与 AI 立场。不要手工拼接含 `highlighter_data` 的 JSON。
+
+**关键原则：AI 永不单方面关闭一条分歧。** 不同意时用 `open-disagree`（保持 open、让提出者决定），**绝不**用 dismiss 把别人的评论关掉——关闭/重开一条评论的权力属于提出评论的人（以及页面 owner）。
+
+- 输出 `ERROR:STATE_REQUIRED` / `ERROR:INVALID_STATE`：必须补上合法的 `--state`。
+- 输出 `ERROR:IS_REPLY:<parent_id>`：传入的是回复 ID，改用父评论 ID 重试。
+- 输出 `ERROR:AUTH_FAILED`（403）：先查该链接评论是否被关闭（`allow_comments=false`），可经 `update-share-settings.md` 重新开启后重试。
 
 如果误发了一条回复，可以删除（仅作者本人、且父评论仍为 `open` 时可删，会级联删除其回复）：
 
@@ -91,15 +104,15 @@ node scripts/comment_resolve.js "<REF>" <COMMENT_ID> --reply "已按你的建议
 node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>" --method DELETE
 ```
 
-## 3. 无法处理或无关评论
+## 3. 无法处理或与页面无关的评论
 
-对于无法处理或无关的评论，必须 dismiss，不要无视：
+**注意区分“不同意”与“无关”**：对你有异议但属于合理讨论的评论，用步骤 5 的 `--state open-disagree`（保持 open），**不要** dismiss。`dismiss` 只用于**真正无关/无法处理**的评论（例如指向了另一份分享、垃圾评论）——这是 owner 的否决动作：
 
 ```bash
 node scripts/comment_resolve.js "<REF>" <COMMENT_ID> --dismiss --note "页面中没有此元素，可能指的是另一份分享"
 ```
 
-输出 `COMMENT_DISMISSED:<id>` 即完成。
+输出 `COMMENT_DISMISSED:<id>` 即完成。（`comment_resolve.js` 为兼容保留；日常回复请优先用 `comment_reply.js --state`。）
 
 ## 4. 收尾：删除任务锚点
 
