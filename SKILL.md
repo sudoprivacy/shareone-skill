@@ -105,6 +105,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 用户提供的目标可以是完整链接、`/s/<ref>` 等路径、裸 `share_id`（16 位字符串）或自定义短链 slug。服务端接口同时接受 `share_id` 和 slug，无需自行区分两者。
 - `/s/<share_id>` 是最终给用户访问的分享链接，**不是上传 API endpoint**。不要把 `/s/<share_id>` 当作发布地址，也不要直接向 `/s/<share_id>` PUT/POST 文件。
 - 路径前缀与内容类型的对应关系：`/s/`、`/md/` 是文本/HTML/Markdown 页面；`/pdf/`、`/ppt/`、`/word/` 是二进制文件。元数据更新时 `update_share_settings.js` 会按此前缀自动选择 endpoint，裸 `share_id` 或 slug 由脚本先试页面 endpoint、必要时回退文件 endpoint，整个过程不下载源文件。
+- 文本页里 `/s/<ref>` 与 `/md/<ref>` **等价**：前缀不绑定、也不校验内容类型，浏览路由一律按 ref 解析 share、按 share 真实 content-type 渲染。因此文本页可以就地把 content-type 从 md 升级成 html（`.md → .html`，如把 ASCII 图升级成 Mermaid），URL（含老的 `/md/<slug>`）一字不变、评论保留——见 `workflows/publish-text-page.md` §6b。升级用 `--share-id` 更新，**绝不 `--force-new`**。
 - 内容发布与更新统一使用 `publish.js`，脚本会按文件类型自动分发到文本通道或二进制直传通道（stderr 输出 `INFO:CHANNEL:text|binary`），不需要也不应该自行选择底层上传脚本。不要因为会话里存在旧的 `/s/<share_id>` 就把二进制文件改走文本页面 PUT；二进制文件传 `--share-id` 会被脚本拒绝（`ERROR:BINARY_NO_SHARE_ID`）。
 - 如果当前会话中已经为同一个文本/HTML 文件生成过 ShareOne 链接，可复用之前的 `share_id` 执行文本页面 PUT 更新；否则执行首次创建。
 - 非 owner 下载要求链接已开启允许下载；若脚本输出 `ERROR:DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
