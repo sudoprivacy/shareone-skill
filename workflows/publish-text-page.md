@@ -88,6 +88,24 @@ node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-i
 - 如果用户要求修改自定义短链接，可以传入 `--slug`。
 - 空字符串 `""` 表示清除对应设置。
 
+## 6b. 就地升级 content-type（md ↔ html ↔ txt），URL 与评论都不变
+
+文本页的 content-type 由文件名后缀决定，可以在**同一个 share 上就地更换**——最常见的是「先用 `.md` 快速起草 → 之后升级成带样式 / Mermaid 的 `.html`」（例如把 md 里的 ASCII 流程图升级成 Mermaid 渲染图）。
+
+做法就是一次普通的 PUT 更新（§6）：传新内容 + 新后缀的 `--filename`，并带上原 `--share-id`：
+
+```bash
+node scripts/publish.js "<NEW_HTML_FILE>" --filename "report.html" --share-id <YOUR_SHARE_ID>
+```
+
+关键保证（这些是可依赖的特性，不是巧合）：
+
+- **分享 URL 一字不变。** ShareOne 的浏览路由按 ref（slug/share_id）解析 share、按 share 真实的 content-type 渲染，**URL 前缀不参与内容决定**。所以 `/s/<ref>` 与 `/md/<ref>` 完全等价、指向同一个 share、服务同一份内容——升级成 html 后，**老的 `/md/<slug>` 链接继续有效、直接渲染新 html**，不用改前缀，也不会重定向。
+- **评论全部保留（open + resolved）。** 评论按 `share_id` 存储、与内容格式无关，就地升级不丢任何评论。
+- **就地升级禁止 `--force-new`。** `--force-new` 会新建一个 share（新 URL、新 `share_id`），**丢掉原链接和其上所有评论**。要升级 content-type 时永远用 `--share-id` 更新，绝不 `--force-new`。
+
+> 反面教训：一个没有上下文的 agent 看到「把 md 换成 html」，可能误以为要重新发布而加 `--force-new`——那会另起一条链接、丢掉原 URL 和评论。正确做法是 `--share-id` 就地更新。
+
 ## 7. 使用 Mermaid.js 绘制图表
 
 **适用前提**：本章节只适用于目标内容本来就是 HTML 页面的场景——即用户提供的就是 HTML 文件，或用户明确要求美化/做成网页而新生成 HTML。**不要为了使用 Mermaid 而把 `.md`/`.txt` 文件转换成 HTML**；`.md` 里的图表内容按第 1 节的格式保持规则原文发布。
