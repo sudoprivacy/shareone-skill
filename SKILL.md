@@ -132,6 +132,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 发布成功后必须直接使用脚本返回的 `share_url`，不要自行拼接分享链接；不要展示备用链接。
 - 只有当用户明确要求开启评论、允许讨论或协同模式时，才添加 `--allow-comments true`。默认不开启评论。
 - 只有当用户明确要求页面持久化数据（如保存游戏分数、表单状态）时，才添加 `--allow-data true`。默认不开启数据存储。
+- 页面持久化数据时，页面代码用自动注入的 `window.__SHAREONE__` SDK，**必须按敏感度二选一、无默认**：`putShared(key, value|File)` 存服务器·所有访客可读·跨设备（大文件自动走 blob，≤8MB）；`putPrivate(key, value|File)` 只存这台设备·私有·不上传。命名即风险（Shared=别人能看），敏感/隐私数据一律 `putPrivate`。现成的“公开 vs 敏感”拖拽上传参考页：`templates/page-storage-dropzone.html`；完整 SDK 见后端 `agent.md` §14。
 - 自定义短链接（slug）：服务端会根据文件名自动生成可读的 slug（如 `quarterly-report`），客户端无需额外操作。只有用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”时，才在发布命令添加 `--slug xxx` 覆盖自动生成；slug 冲突时把服务端提示反馈给用户，不要静默改名。
 - 评论处理必须形成闭环：认领、修改、重新发布，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于真正无关/无法处理的评论。
 
