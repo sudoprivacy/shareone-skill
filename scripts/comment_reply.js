@@ -8,34 +8,22 @@
 //   open-need-input  需要人类进一步澄清 → 保持 open
 
 const {
+    AGENT_REPLY_STATES,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
+    extractShareRef,
     printShareOneScriptError,
     requestShareOneJson,
     resolveDirectApiKey,
 } = require('./shareone_client');
 
-const STATES = ['resolved-agree', 'open-disagree', 'open-need-input'];
+const STATES = Object.keys(AGENT_REPLY_STATES);
 
 function usage() {
-    console.error('Usage: node comment_reply.js <share_link_or_ref> <comment_id> --content "<回复内容>" --state <resolved-agree|open-disagree|open-need-input> [--api-key <key>]');
+    console.error(`Usage: node comment_reply.js <share_link_or_ref> <comment_id> --content "<回复内容>" --state <${STATES.join('|')}> [--api-key <key>]`);
     console.error('  --state 必填，无默认；缺省即报错：');
-    console.error('    resolved-agree   同意并已处理 → 评论收敛为 resolved');
-    console.error('    open-disagree    不同意（--content 里写清理由），但保持 open，把关闭权交回提出者（AI 不 dismiss）');
-    console.error('    open-need-input  需要人类澄清 → 保持 open');
-}
-
-function extractShareRef(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-        const parsed = raw.includes('://') ? new URL(raw) : null;
-        const path = parsed ? parsed.pathname : raw.split('?')[0].split('#')[0];
-        const parts = path.split('/').filter(Boolean);
-        if (parts.length === 0) return raw;
-        return parts[parts.length - 1] || raw;
-    } catch (_) {
-        return raw;
+    for (const [name, hint] of Object.entries(AGENT_REPLY_STATES)) {
+        console.error(`    ${name}   ${hint}`);
     }
 }
 

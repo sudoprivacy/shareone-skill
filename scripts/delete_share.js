@@ -8,6 +8,7 @@
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
+    extractShareRef,
     printShareOneScriptError,
     requestShareOneBuffer,
     resolveDirectApiKey,
@@ -16,20 +17,6 @@ const {
 function usage() {
     console.error('Usage: node delete_share.js <share_link_or_ref> [--api-key <key>]');
     console.error('  删除前请与用户确认——软删除后公开链接立即失效。');
-}
-
-function extractShareRef(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-        const parsed = raw.includes('://') ? new URL(raw) : null;
-        const path = parsed ? parsed.pathname : raw.split('?')[0].split('#')[0];
-        const parts = path.split('/').filter(Boolean);
-        if (parts.length === 0) return raw;
-        return parts[parts.length - 1] || raw;
-    } catch (_) {
-        return raw;
-    }
 }
 
 const args = process.argv.slice(2);
