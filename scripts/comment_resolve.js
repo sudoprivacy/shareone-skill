@@ -7,6 +7,7 @@
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
+    extractShareRef,
     printShareOneScriptError,
     requestShareOneJson,
     resolveDirectApiKey,
@@ -15,20 +16,6 @@ const {
 function usage() {
     console.error('Usage: node comment_resolve.js <share_link_or_ref> <comment_id> --reply "<回复内容>" [--note "<处理说明>"] [--api-key <key>]');
     console.error('       node comment_resolve.js <share_link_or_ref> <comment_id> --dismiss --note "<原因>" [--reply "<回复内容>"] [--api-key <key>]');
-}
-
-function extractShareRef(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-        const parsed = raw.includes('://') ? new URL(raw) : null;
-        const path = parsed ? parsed.pathname : raw.split('?')[0].split('#')[0];
-        const parts = path.split('/').filter(Boolean);
-        if (parts.length === 0) return raw;
-        return parts[parts.length - 1] || raw;
-    } catch (_) {
-        return raw;
-    }
 }
 
 const args = process.argv.slice(2);

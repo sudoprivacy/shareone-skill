@@ -401,7 +401,42 @@ function printShareOneScriptError(error) {
     console.error(`ERROR:${error.message}`);
 }
 
+// Agent comment-reply lifecycle states — the single skill-side source of truth.
+// The SERVER (`AGENT_REPLY_STATES` in backend/routers/comments.py) is the
+// authoritative validator (422 on an invalid/missing state); this mirror exists
+// so comment_reply.js / comment_resolve.js never hardcode the state strings in
+// more than one place. Keys are the wire values; values are the human hint.
+const AGENT_REPLY_STATES = {
+    'resolved-agree': '同意并已处理 → 评论收敛为 resolved',
+    'open-disagree': '不同意（在 --content 里写清理由），但保持 open，把关闭权交回提出者（AI 不 dismiss）',
+    'open-need-input': '需要人类进一步澄清 → 保持 open',
+};
+
+// Extract the trailing share ref (slug or 16-char share_id) from a full URL, a
+// `/s/<ref>` path, a raw-file `/file/<ref>` path, an API `/api/.../shares/<ref>`
+// path, or a bare ref. Shared by every script that accepts a
+// `<share_link_or_ref>` positional arg.
+function extractShareRef(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+        const parsed = raw.includes('://') ? new URL(raw) : null;
+        const path = parsed ? parsed.pathname : raw.split('?')[0].split('#')[0];
+        const parts = path.split('/').filter(Boolean);
+        if (parts.length === 0) return raw;
+        if (parts[0] === 'file' && parts.length >= 2) return parts[1];
+        if (parts[0] === 'api' && parts.includes('shares')) {
+            const index = parts.indexOf('shares');
+            return parts[index + 1] || raw;
+        }
+        return parts[parts.length - 1] || raw;
+    } catch (_) {
+        return raw;
+    }
+}
+
 module.exports = {
+    AGENT_REPLY_STATES,
     CREDENTIAL_MODE_DIRECT,
     CREDENTIAL_MODE_DIRECT_FALLBACK,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
@@ -412,6 +447,7 @@ module.exports = {
     deleteLocalApiKey,
     deleteSudoworkApiKey,
     detectCredentialMode,
+    extractShareRef,
     getBaseUrl,
     getCredentialPathCandidates,
     getCredentialsPath,

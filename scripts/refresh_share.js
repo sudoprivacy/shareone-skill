@@ -9,6 +9,7 @@
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
+    extractShareRef,
     printShareOneScriptError,
     requestShareOneJson,
     resolveDirectApiKey,
@@ -19,19 +20,6 @@ function usage() {
     console.error('  仅对绑定了远程源 URL 的分享有效；非 remote-bound 会返回 NOT_REMOTE_BOUND。');
 }
 
-function extractShareRef(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-        const parsed = raw.includes('://') ? new URL(raw) : null;
-        const path = parsed ? parsed.pathname : raw.split('?')[0].split('#')[0];
-        const parts = path.split('/').filter(Boolean);
-        if (parts.length === 0) return raw;
-        return parts[parts.length - 1] || raw;
-    } catch (_) {
-        return raw;
-    }
-}
 
 const args = process.argv.slice(2);
 let ref = null;
