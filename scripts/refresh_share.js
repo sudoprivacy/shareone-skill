@@ -63,6 +63,5 @@ if (!ref) {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
     console.error(`SHARE_REFRESHED:${extractShareRef(ref)}`);
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

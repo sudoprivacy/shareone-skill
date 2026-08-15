@@ -92,6 +92,5 @@ function projectComment(c) {
         : JSON.stringify(result, null, 2);
     process.stdout.write(out + '\n');
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

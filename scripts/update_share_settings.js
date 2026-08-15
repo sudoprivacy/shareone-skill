@@ -198,6 +198,5 @@ async function putSettings(apiPath) {
         process.stdout.write(res.data);
     }
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

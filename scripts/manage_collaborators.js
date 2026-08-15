@@ -143,6 +143,5 @@ function parseRef(input) {
 
     console.log(JSON.stringify(result, null, 2));
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

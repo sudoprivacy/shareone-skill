@@ -227,6 +227,5 @@ if (!filePath) {
 }
 
 uploadFile(filePath, options).catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

@@ -481,20 +481,82 @@ function isAuthFailedError(error) {
     return /Invalid API Key|Inactive user|unauthorized|forbidden|权限不足|无效/i.test(detail || error.message || '');
 }
 
+// --- Error steering (cli-steering rules 7 + 5b) --------------------------
+// Every failure carries a stable ERROR:<CODE> token, a semantic exit code, and a
+// RETRYABLE flag (+ optional HINT) so the LLM/shell can branch on "retry vs
+// re-auth vs fix-the-call" without parsing prose. One mapping, one emitter — SSOT.
+const ERROR_CATEGORY_META = {
+    validation: { exit: 2, retryable: false },  // bad/missing args — fix the call
+    not_found: { exit: 4, retryable: false },
+    conflict: { exit: 5, retryable: false },     // already exists / precondition
+    auth_failed: { exit: 7, retryable: false },  // re-auth, don't retry blindly
+    rate_limited: { exit: 8, retryable: true },  // back off and retry
+    transient: { exit: 9, retryable: true },     // 5xx / network — retry
+    error: { exit: 1, retryable: false },        // uncategorized catch-all
+};
+
+const ERROR_CODE_CATEGORY = {
+    UNKNOWN_ARGUMENT: 'validation', MISSING_VALUE: 'validation', INVALID_BOOLEAN: 'validation',
+    INVALID_STATE: 'validation', STATE_REQUIRED: 'validation', CONTENT_REQUIRED: 'validation',
+    NO_SETTINGS_PROVIDED: 'validation', OPTION_NOT_SUPPORTED: 'validation',
+    LOOKS_LIKE_SHARE_LINK: 'validation', IS_REPLY: 'validation', INVALID_RESPONSE: 'validation',
+    BINARY_NO_ALLOW_COMMENTS: 'validation', BINARY_NO_ALLOW_DATA: 'validation',
+    BINARY_NO_SHARE_ID: 'validation', DOWNLOAD_NOT_ALLOWED: 'validation',
+    FILE_NOT_FOUND: 'not_found', COMMENT_NOT_FOUND: 'not_found',
+    CUSTOM_SLUG_TAKEN: 'conflict',
+    KEY_NOT_FOUND: 'auth_failed', AUTH_FAILED: 'auth_failed', SUDOWORK_MANAGED_KEY: 'auth_failed',
+    SUDOWORK_ENV_OK_KEY_NOT_FOUND: 'auth_failed', SUDOWORK_WRITE_BROKEN: 'auth_failed',
+    RATE_LIMIT_EXCEEDED: 'rate_limited',
+};
+
+const ERROR_HINTS = {
+    STATE_REQUIRED: '重跑并加 --state：resolved-agree | open-disagree | open-need-input。',
+    INVALID_STATE: '--state 只能是 resolved-agree | open-disagree | open-need-input。',
+    KEY_NOT_FOUND: '先运行 ensure_credentials.js 配置/创建 API Key，再重试。',
+    AUTH_FAILED: 'API Key 无效或过期：用 save_api_key.js 更新，或 create_guest_key.js 新建。',
+    SUDOWORK_ENV_OK_KEY_NOT_FOUND: '先运行 check_api_key.js，再用 save_api_key.js / create_guest_key.js 设置 Key。',
+    RATE_LIMIT_EXCEEDED: '触发限流：退避几秒后重试。',
+    CUSTOM_SLUG_TAKEN: '换一个 --slug；若这是你自己删掉的旧链接，直接重发同名 slug 即可复用。',
+    SUDOWORK_MANAGED_KEY: 'Sudowork 环境下 Key 由平台托管，勿手动传 --api-key。',
+};
+
+// Print the ERROR/message/HINT/RETRYABLE envelope for `code`; return the semantic
+// exit code (does not exit — caller decides). `hint`/`retryable` override the map.
+function _emitErrorEnvelope(code, message, opts = {}) {
+    const category = opts.category || ERROR_CODE_CATEGORY[code] || 'error';
+    const meta = ERROR_CATEGORY_META[category] || ERROR_CATEGORY_META.error;
+    console.error(`ERROR:${code}`);
+    if (message) console.error(message);
+    const hint = opts.hint != null ? opts.hint : ERROR_HINTS[code];
+    if (hint) console.error(`HINT:${hint}`);
+    console.error(`RETRYABLE:${opts.retryable != null ? opts.retryable : meta.retryable}`);
+    return opts.exit != null ? opts.exit : meta.exit;
+}
+
+// Terminal emitter for inline (validation/precondition) failure sites: emit the
+// envelope and exit with the semantic code. Replaces `console.error('ERROR:X')`
+// + `process.exit(1)`.
+function emitError(code, message, opts = {}) {
+    process.exit(_emitErrorEnvelope(code, message, opts));
+}
+
+// For runtime/API errors caught in a script's main(): emit the envelope and
+// RETURN the semantic exit code so the caller can `process.exit(...)`.
 function printShareOneScriptError(error) {
     if (isSudowork() && isSudoworkMissingKeyError(error)) {
-        console.error("ERROR:SUDOWORK_ENV_OK_KEY_NOT_FOUND");
-        console.error("请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-        return;
+        return _emitErrorEnvelope('SUDOWORK_ENV_OK_KEY_NOT_FOUND',
+            '请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
     }
-
     if (isAuthFailedError(error)) {
-        console.error("ERROR:AUTH_FAILED");
-        console.error("API Key 无效或权限不足。");
-        return;
+        return _emitErrorEnvelope('AUTH_FAILED', 'API Key 无效或权限不足。');
     }
-
-    console.error(`ERROR:${error.message}`);
+    const status = error && error.statusCode;
+    if (status === 429) return _emitErrorEnvelope('RATE_LIMIT_EXCEEDED', error.message);
+    if (status && status >= 500) {
+        return _emitErrorEnvelope('SERVER_ERROR', error.message, { category: 'transient', retryable: true });
+    }
+    // Uncategorized: keep the message as the token (legacy behavior), exit 1.
+    return _emitErrorEnvelope(String((error && error.message) || 'UNKNOWN'), '', { category: 'error' });
 }
 
 // Agent comment-reply lifecycle states — the single skill-side source of truth.
@@ -553,6 +615,7 @@ module.exports = {
     isAuthFailedError,
     isSudoworkMissingKeyError,
     listSudoworkSecrets,
+    emitError,
     printShareOneScriptError,
     readLocalApiKey,
     requestBuffer,

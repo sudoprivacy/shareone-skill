@@ -216,6 +216,5 @@ async function verifyUpdatedContent(updatedShareId, expectedContent) {
 }
 
 uploadPage().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

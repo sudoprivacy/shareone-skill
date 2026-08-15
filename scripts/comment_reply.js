@@ -126,6 +126,5 @@ if (!STATES.includes(state)) {
     console.log(`REPLY_POSTED:${posted && posted.id !== undefined ? posted.id : ''}`);
     console.log(`COMMENT_STATE:${state}`);
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });
