@@ -57,6 +57,5 @@ if (!ref) {
     await requestShareOneBuffer(`/api/v1/pages/${shareRef}`, { method: 'DELETE', apiKey });
     console.log(`SHARE_DELETED:${extractShareRef(ref)}`);
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

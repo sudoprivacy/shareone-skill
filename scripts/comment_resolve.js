@@ -126,6 +126,5 @@ if (dismiss && !note) {
     }, payload);
     console.log(dismiss ? `COMMENT_DISMISSED:${wantedId}` : `COMMENT_RESOLVED:${wantedId}`);
 })().catch((error) => {
-    printShareOneScriptError(error);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });
