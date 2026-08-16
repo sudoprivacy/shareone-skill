@@ -195,6 +195,19 @@ async function uploadPage() {
     console.log(res.text);
     recordHistory(res.text);
 
+    // cli-steering: the instant an AI turns on page storage is the right moment
+    // to surface the sensitivity choice + the data-local compute pattern — not a
+    // static prompt it may never read. One line on stderr (stdout stays clean JSON).
+    if (allowData === true) {
+        console.error(
+            'HINT:PAGE_DATA_ENABLED:This page can store data. '
+            + 'Public/shared → window.__SHAREONE__.putShared (server, cross-device); '
+            + 'sensitive → window.__SHAREONE__.putPrivate (this device+browser only, never uploaded). '
+            + 'Private data can still be computed on: keep the model public and run inference in the page '
+            + 'so bytes never leave the device — reference: templates/client-side-inference.html'
+        );
+    }
+
     if (shareId && !remoteUrl) {
         const content = fs.readFileSync(filePath, "utf-8");
         await verifyUpdatedContent(shareId, content);
