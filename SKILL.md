@@ -75,30 +75,36 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
    → 读 `workflows/delete-api-key.md`。无需凭据检查。
 
 2. **删除/移除 ShareOne 分享链接本身（用户明确要求“删掉/删除/移除”某个 share_id、slug 或链接）**
-   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/delete-share.md`。删除是 owner-only 操作，执行前须与用户确认（软删除后公开链接立即失效）。对 HTML/文本页和二进制文件链接（`/pdf/`、`/ppt/`、`/word/`）通用。注意与第 4 条区分：本条是删除整个 share，不是改设置。
+   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/delete-share.md`。删除是 owner-only 操作，执行前须与用户确认（软删除后公开链接立即失效）。对 HTML/文本页和二进制文件链接（`/pdf/`、`/ppt/`、`/word/`）通用。注意与第 6 条区分：本条是删除整个 share，不是改设置。
 
 3. **刷新 remote-url auto-follow 分享的源内容（用户说“我 push 了”“拉一下最新源”“刷新这个远程链接”）**
-   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/refresh-remote.md`。remote 页面刷新是懒的、只在打开渲染页时触发，下载/`/file` 只服务缓存；本条用 `refresh_share.js` 显式强制 refetch。仅对绑定了远程 URL 的分享有效；非 remote-bound 返回 `NOT_REMOTE_BOUND`，此时应改走第 4 或第 8 条（改设置 / 重新发布内容）。
+   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/refresh-remote.md`。remote 页面刷新是懒的、只在打开渲染页时触发，下载/`/file` 只服务缓存；本条用 `refresh_share.js` 显式强制 refetch。仅对绑定了远程 URL 的分享有效；非 remote-bound 返回 `NOT_REMOTE_BOUND`，此时应改走第 6 或第 10 条（改设置 / 重新发布内容）。
 
-4. **用户提供已有 ShareOne 链接、`share_id` 或 slug，且只要求修改水印、访问密码、自定义短链接、评论开关或数据存储开关（不改内容本身）**
+4. **绑定账号、注册、升级 guest、绑定邮箱**
+   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/bind-account.md`。
+
+5. **让别人一起编辑、分享编辑权限、添加/移除/查看协作者、对方怎么拿 API Key**
+   → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/manage-collaborators.md`，最后读 `workflows/result-and-errors.md`。
+
+6. **用户提供已有 ShareOne 链接、`share_id` 或 slug，且只要求修改水印、访问密码、自定义短链接、评论开关或数据存储开关（不改内容本身）**
    → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/update-share-settings.md`，最后读 `workflows/result-and-errors.md`。
    这是元数据更新：不要按文件类型路由，不要下载源文件，不要使用 `publish.js`，不要重新上传内容。对二进制文件链接（`/pdf/`、`/ppt/`、`/word/`）同样适用本条。
 
-5. **下载 ShareOne 链接的文件或取回源内容**
+7. **下载 ShareOne 链接的文件或取回源内容**
    → 读 `workflows/download-file.md`。下载脚本会在已有凭据时优先尝试 owner 下载，没有凭据时自动走公开下载；不要为了普通下载强制配置 API Key。
 
-6. **只查看、拉取、总结 ShareOne 链接评论（用户没有要求修改）**
+8. **只查看、拉取、总结 ShareOne 链接评论（用户没有要求修改）**
    → 读 `workflows/comments-view.md`。查看评论用 `comment_list.js`，走公开接口，无需凭据检查。
 
-7. **处理评论、根据评论修改页面、修复 ShareOne 链接内容**
+9. **处理评论、根据评论修改页面、修复 ShareOne 链接内容**
    → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-process.md`（其中的重新发布步骤会引用 `workflows/publish-text-page.md`），最后读 `workflows/result-and-errors.md`。
 
-8. **发布、分享、生成链接、上线（创建新链接或更新已有链接的内容）**
+10. **发布、分享、生成链接、上线（创建新链接或更新已有链接的内容）**
    → 先读 `workflows/environment-and-credentials.md`，再按目标文件类型二选一，最后读 `workflows/result-and-errors.md`：
    - `.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx` → `workflows/publish-binary-file.md`
    - `.html`、`.md`、`.txt`、对话内容、大段文本、代码块、已包装成 HTML 的内容 → `workflows/publish-text-page.md`。注意：`.md`/`.txt` 一律按原格式发布，不要因为内容包含图表就转成 HTML；只有目标本来就是 HTML 页面时才参考其中的 Mermaid.js 章节。
 
-所有需要 ShareOne API 的操作（上面第 2、3、4、5、7、8 条），都先运行 `node scripts/ensure_credentials.js`，输出 token 含义与处理流程见 `workflows/environment-and-credentials.md`，这里不重复。
+所有需要 ShareOne API 的操作（上面第 2、3、4、5、6、7、9、10 条），都先运行 `node scripts/ensure_credentials.js`，输出 token 含义与处理流程见 `workflows/environment-and-credentials.md`，这里不重复。
 
 ## ShareOne 链接与 share_id
 

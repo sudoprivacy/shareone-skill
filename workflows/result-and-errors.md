@@ -62,4 +62,5 @@ slug 冲突在两类发布中的表现**不同**，不要混淆：
 - `ERROR:UPDATE_VERIFY_FAILED`：不要按发布成功处理（即使 stdout 中已经输出了包含 `share_url` 的 JSON）。提示用户“ShareOne 接口接受了更新请求，但回读源内容与本地文件不一致，更新可能没有真正生效”，并保留本地文件，等待用户决定是否重试或作为新页面发布。
 - `ERROR:ACTIVE_SHARE_TASK`：当前目录存在 `.shareone_active_task`（评论处理任务进行中），但发布命令没有带 `--share-id`。按错误提示中给出的 id 改用 `--share-id <id>` 执行 PUT 更新原链接；只有在确认用户确实要创建全新链接时，才删除该锚点文件或追加 `--force-new` 重试。
 - `ERROR:UNKNOWN_ARGUMENT:<arg>` 或 `ERROR:MISSING_VALUE:<flag>`：命令参数写错或缺值。按脚本 Usage 修正命令，不要绕过脚本。
+- `REMOTE_SOURCE_BOUND`（HTTP 409）：该页面已绑定远程源 URL，不能直接用 `html_content` 更新。错误返回中 `detail.remote_url` 包含源地址。告知用户去源头修改内容（如 GitHub 仓库文件或源 ShareOne 页面），所有引用该源的分享链接会自动同步。如果用户确实要改为本地内容，需要在 PUT 请求中同时传 `"remote_url": ""` 和 `"html_content": "..."` 来先解除绑定。
 - 下载相关错误码（`PASSWORD_REQUIRED`、`PASSWORD_INVALID`、`DOWNLOAD_NOT_ALLOWED`、`SHARE_NOT_FOUND`）的处理见 `download-file.md`。
