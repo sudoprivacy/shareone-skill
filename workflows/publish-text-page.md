@@ -62,12 +62,31 @@ node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/mai
 规则：
 
 - `--remote-url` 与本地文件路径互斥，不能同时使用。
-- 服务端校验 URL 域名是否在白名单内，不支持的域名返回 400 并提示允许的域名列表。GitHub `blob` URL 会自动转换为 raw content URL。
+- 支持的域名：GitHub（blob URL 自动转 raw）和 **ShareOne 内链**（如 `https://s.shareone.vip/s/my-source-page`）。其他域名返回 400。
 - `--filename` 可选：未提供时服务端从 URL 路径自动提取。
 - 创建时服务端必须成功 fetch 远程内容，失败返回 400。
 - 远程内容与本地上传内容一样经过 AI 审核。
 - 默认不开启评论。
 - 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
+
+### ShareOne 内链 pointer 模式（多版本分发）
+
+当 `--remote-url` 指向另一个 ShareOne 链接时，创建的是一个 pointer share：内容从源 share 同步，但有自己的密码、水印和短链接。典型用途：一份源文档 + N 个定制化分发版本。
+
+```bash
+# 源文档已存在：https://s.shareone.vip/s/sudowork-bp
+# 创建带独立密码和水印的 pointer
+node scripts/upload_page.js --remote-url "https://s.shareone.vip/s/sudowork-bp" --password "abc123" --watermark "仅供某机构参考" --slug "sudowork-bp-xxx"
+```
+
+- 源 share **不需要开 allow_download**——内链 pointer 走 DB 直读，不走 HTTP。
+- 源内容更新后，pointer share 在下次被访问时自动同步最新内容。
+- pointer share 不能用 `html_content` 直接更新（返回 `409 REMOTE_SOURCE_BOUND`），必须改源头或先解绑（PUT `remote_url: ""`）。
+- 也可以对已有链接 PUT 绑定 `remote_url`，将独立副本转为 pointer：
+
+```bash
+node scripts/upload_page.js --remote-url "https://s.shareone.vip/s/sudowork-bp" --share-id <已有的share_id>
+```
 
 ## 6. 更新已有链接 (PUT)
 

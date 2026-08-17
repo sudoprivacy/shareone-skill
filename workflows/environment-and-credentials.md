@@ -31,7 +31,9 @@ node scripts/ensure_credentials.js --create-guest
 两个命令都会自动完成保存、复查和核对，按输出处理：
 
 - `READY`：继续原操作。
-- `GUEST_KEY_CREATED:<api_key>`：**阻塞性用户通知**。分隔线之后是需要原样转发给用户的完整通知文本（含临时 API Key、绑定账号链接和保存提醒）。必须先把该通知发给用户，才能继续原任务的任何上传、下载、评论处理命令；即使 key 已自动保存也不能省略。
+- `GUEST_KEY_CREATED:<api_key>`：**阻塞性用户通知**。分隔线之后是需要原样转发给用户的完整通知文本（含临时 API Key、绑定账号链接和保存提醒）。必须先把该通知发给用户，才能继续原任务的任何上传、下载、评论处理命令；即使 key 已自动保存也不能省略。转发完通知后，追加一句引导：
+  > 如果您希望绑定邮箱以便后续在网站管理文件，请告诉我您的邮箱地址，我可以帮您完成绑定（API Key 不变）。
+  这只是轻提示，不阻塞后续操作。如果用户回复了邮箱，按 `workflows/bind-account.md` 执行绑定流程。
 - `NOTE:SUDOWORK_FALLBACK_KEY_SAVED`：附加信息，表示 key 保存到了 skill 安装目录下的本地 fallback 凭证（`.shareone_credentials`），不是 Sudowork Secret Store。脚本输出的说明文字一并转发给用户即可。
 
 ## 3. 后续命令规则
