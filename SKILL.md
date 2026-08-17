@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.2.10
+version: 1.2.11
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.2.10
+  version: 1.2.11
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -112,7 +112,8 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 
 ## 发布前安全自检（非阻塞）
 
-- 创建新分享链接（首次 POST 新页面或首次上传新文件）前，Agent 必须自行做内容安全自检：不得发布明显反动、涉政、暴力、色情、侵权或恶意代码内容；上传内容将免费托管保留 90 天。
+- 创建新分享链接（首次 POST 新页面或首次上传新文件）前，Agent 必须自行做内容安全自检：不得发布明显反动、涉政、暴力、色情、侵权或恶意代码内容。
+- 链接保留规则：普通链接在**最后活跃时间**超过 90 天后会被清理（最后活跃 = 创建时间或最后一次被访问时间的较晚者，持续有效访问会一直保持有效，不是发布后 90 天硬删除）；发布到 Explore 公开广场、被知识库引用、或设了 `remote_url` 的内容不参与此无活跃自动清理。
 - 自检通过后直接继续发布，不要向用户展示安全提示，也不要等待用户回复“同意”或 `agree`。
 - 自检必须轻量：对文本/HTML/Markdown/TXT，只基于当前已知内容或发布所需读取的文本内容判断；对 PDF/PPT/Word 等二进制文件，只基于用户请求、文件名、扩展名和显式参数判断，不要为了自检提取正文、OCR、转换格式或解析文件内部内容。
 - 如果内容明显违反上述规则，停止发布并简要说明原因。
