@@ -12,13 +12,15 @@
 
 官网：https://shareone.vip
 
-## 关键词
 
-ShareOne 覆盖以下搜索场景：AI Agent 发布工具、HTML 页面托管、Markdown 在线分享、PDF 短链接分享、Word 文档分享、PPT 在线分享、文档水印、访问密码分享链接、AI 生成网页发布、Codex Skill 文档发布、Agent workflow publishing。
 
 本仓库包含 ShareOne Agent Skill。它让 Codex、Claude Code、OpenAI Agent、Dify、工作流自动化工具等 AI Agent 可以把本地生成的内容快速发布到 ShareOne，并生成可访问、可转发、可更新的公网分享链接。
 
 ShareOne 适合用于发布 AI 生成页面、分享 Markdown 在线文档、托管 HTML 演示页、上传 PDF/Word/PPT 文件、生成团队评审链接，以及为文档添加访问密码、水印和评论协作能力。
+
+## 关键词
+
+ShareOne 覆盖以下搜索场景：AI Agent 发布工具、HTML 页面托管、Markdown 在线分享、PDF 短链接分享、Word 文档分享、PPT 在线分享、文档水印、访问密码分享链接、AI 生成网页发布、Codex Skill 文档发布、Agent workflow publishing。
 
 ## ShareOne 是什么
 
