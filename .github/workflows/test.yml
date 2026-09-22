@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  node-tests:
+    name: Zero-dependency Node tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No `npm ci` on purpose: this skill ships without a package.json and every
+      # script must keep running on a bare `node`. If a test ever needs an npm
+      # package, that is the signal a dependency crept into the skill itself.
+      - name: Assert the skill stays dependency-free
+        run: |
+          set -euo pipefail
+          if [ -f package.json ] || [ -d node_modules ]; then
+            echo "The skill must not gain npm dependencies — it is distributed standalone." >&2
+            exit 1
+          fi
+
+      - name: QR encoder regression
+        run: node tests/test_make_qr.js
+
+      - name: Redirect-follow regression
+        run: node test/redirect_follow.test.js
+
+      - name: Card templates carry a decodable, correctly-sized QR
+        run: node tests/test_business_card_template.js

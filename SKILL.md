@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.2.12
+version: 1.3.0
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.2.12
+  version: 1.3.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -141,6 +141,8 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 只有当用户明确要求页面持久化数据（如保存游戏分数、表单状态）时，才添加 `--allow-data true`。默认不开启数据存储。
 - 页面持久化数据时，页面代码用自动注入的 `window.__SHAREONE__` SDK，**必须按敏感度二选一、无默认**：`putShared(key, value|File)` 存服务器·所有访客可读·跨设备（大文件自动走 blob，≤8MB）；`putPrivate(key, value|File)` 只存这台设备·私有·不上传。命名即风险（Shared=别人能看），敏感/隐私数据一律 `putPrivate`。现成的“公开 vs 敏感”拖拽上传参考页：`templates/page-storage-dropzone.html`；私有数据可留在本机就地推理（模型公开＋数据 `putPrivate`＋页面内计算，字节不出设备）的参考页：`templates/client-side-inference.html`；完整 SDK 见后端 `agent.md` §14。发布时若带 `--allow-data true`，命令行会在成功后打印一行 `HINT:PAGE_DATA_ENABLED` 提示该二选一与本地推理用法。
 - 自定义短链接（slug）：服务端会根据文件名自动生成可读的 slug（如 `quarterly-report`），客户端无需额外操作。只有用户明确要求“链接叫 xxx”、“自定义短链接 xxx”、“URL 后缀 xxx”时，才在发布命令添加 `--slug xxx` 覆盖自动生成；slug 冲突时把服务端提示反馈给用户，不要静默改名。
+- 页面需要二维码时用 `node scripts/make_qr.js --text "<内容>" --format path`（零依赖，直出 SVG path，贴进页面的 `<path d="...">`；`--format svg` 给完整 `<svg>`，`--ecc L|M|Q|H` 默认 Q）。**不要**引入外部二维码库或 `<img src="https://...qrserver...">` 之类的在线生成服务——发布出去的页面在别人的浏览器里打开，外链会失效、泄露访问者，也印不进 PDF。二维码指向本次发布的链接时，先用 `--slug` 定好链接再生成二维码，顺序反了码会指向不存在的页面。
+- 名片/电子名片：用 `templates/business-card.html`（双面设计，一份 HTML 同时产出可发的图片、可扫的链接、90×54mm 印刷 PDF）。改 `data-field="..."` 的文字即可，vCard 和 tel:/mailto: 由页面脚本从卡面读取，不要另写一份联系方式。二维码指向名片页本身而不是公司官网：扫码的人当场要的是把人存进通讯录，名片页能一键存 vCard，且印出去的卡改不了、名片页能随时更新。
 - 评论处理必须形成闭环：认领、修改、重新发布，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于真正无关/无法处理的评论。
 
 ## 最终回复前检查清单
