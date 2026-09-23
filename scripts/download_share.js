@@ -120,7 +120,10 @@ function parseFilenameFromDisposition(disposition) {
 function emitDownloadInfo(headers) {
     const filename = parseFilenameFromDisposition(headers['content-disposition']);
     if (filename) console.error(`INFO:FILENAME:${filename}`);
-    if (headers['content-type']) console.error(`INFO:CONTENT_TYPE:${headers['content-type']}`);
+    // Downloads of HTML are served as octet-stream so no HTML-rewriting proxy
+    // edits the bytes in transit; the real type travels in its own header.
+    const contentType = headers['x-shareone-content-type'] || headers['content-type'];
+    if (contentType) console.error(`INFO:CONTENT_TYPE:${contentType}`);
     const remoteSource = headers['x-remote-source-url'];
     if (remoteSource) {
         console.error(`INFO:REMOTE_SOURCE:${remoteSource}`);
