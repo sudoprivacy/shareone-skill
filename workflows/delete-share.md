@@ -24,6 +24,17 @@ node scripts/delete_share.js <REF>
 
 成功输出 `SHARE_DELETED:<ref>`。删除是幂等的：对已删除的链接重复执行仍返回 `SHARE_DELETED`。
 
+### 连带失效的指针（必须转达给用户）
+
+如果有别的 ShareOne 分享把这条链接当作内容源（remote-url **指针**），它们会**一并失效**，每条打印一行：
+
+```
+POINTER_INVALIDATED:https://s.shareone.vip/s/xxx
+HINT:POINTERS_INVALIDATED:2
+```
+
+出现这些行时，**必须把每条失效链接原样列给用户**，不要只说"已删除"。指针不持有内容、只缓存源的内容，源撤了它们就没有可指的东西；但**指针可能属于别人**，用户需要知道自己刚刚让哪些链接失效了，才能去知会对方。没有这些行就表示没有任何指针受影响。
+
 ## 4. 错误处理
 
 - `ERROR:KEY_NOT_FOUND`：没有可用凭据，先按 `environment-and-credentials.md` 配置或创建 guest key。
