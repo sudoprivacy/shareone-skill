@@ -54,8 +54,24 @@ if (!ref) {
     }
 
     const shareRef = encodeURIComponent(extractShareRef(ref));
-    await requestShareOneBuffer(`/api/v1/pages/${shareRef}`, { method: 'DELETE', apiKey });
+    const raw = await requestShareOneBuffer(`/api/v1/pages/${shareRef}`, { method: 'DELETE', apiKey });
     console.log(`SHARE_DELETED:${extractShareRef(ref)}`);
+
+    // Deleting a share also kills every ShareOne link that pointed at it — those
+    // may belong to other people. The user has to be told which ones died; a
+    // silent cascade is how someone discovers it from a colleague's broken link.
+    let cascaded = [];
+    try {
+        cascaded = JSON.parse(raw.text).cascaded_pointers || [];
+    } catch {
+        cascaded = []; // older backend answered 204 with no body
+    }
+    for (const pointer of cascaded) {
+        console.log(`POINTER_INVALIDATED:${pointer.share_url}`);
+    }
+    if (cascaded.length > 0) {
+        console.log(`HINT:POINTERS_INVALIDATED:${cascaded.length}`);
+    }
 })().catch((error) => {
     process.exit(printShareOneScriptError(error));
 });
