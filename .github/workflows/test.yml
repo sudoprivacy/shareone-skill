@@ -37,3 +37,6 @@ jobs:
 
       - name: Card templates carry a decodable, correctly-sized QR
         run: node tests/test_business_card_template.js
+
+      - name: Canvas comment template keeps its contract with ShareOne
+        run: node tests/test_canvas_comments_template.js
