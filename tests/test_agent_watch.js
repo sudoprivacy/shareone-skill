@@ -67,8 +67,10 @@ test('timed out handlers fail delivery; scode routing requires an explicit sessi
     const opts = { command: [process.execPath, '-e', 'process.stdin.resume();setTimeout(()=>{},30000)'], cwd: process.cwd(), timeoutSeconds: 1 };
     await assert.rejects(runHandler(opts, { lease_seconds: 300, events: [] }, async () => {}), /timed out/);
     const parsed = parseArgs(['--consumer', 'review', '--cwd', '/workspace', '--scode-session', 'review.jsonl']);
-    assert.deepEqual(parsed.command.slice(0, 4), ['scode', '--print', '--resume', path.resolve('/workspace', 'review.jsonl')]);
+    assert.deepEqual(parsed.command, [process.execPath, path.resolve(__dirname, '../scripts/scode_receive.js'), path.resolve('/workspace', 'review.jsonl')]);
     assert.ok(!parsed.command.some(x => x.includes('skip-permissions')));
+    const configured = parseArgs(['--consumer', 'review', '--scode-session', 'review.jsonl', '--scode-args-json', '["--auth","api-key"]']);
+    assert.deepEqual(configured.command.slice(-2), ['--auth', 'api-key']);
     assert.throws(() => parseArgs(['--consumer', 'review']), /Choose/);
     assert.throws(() => parseArgs(['--consumer', '../review']), /consumer/);
 });

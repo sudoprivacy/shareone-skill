@@ -26,7 +26,9 @@ node scripts/agent_watch.js --consumer scode-review --share '<分享链接>' \
   --cwd '<项目目录>' --scode-session '<已有会话路径>'
 ```
 
-接收器调用 `scode --print --resume <会话路径>`，把事件通过 stdin 交给该会话。需要机器已安装并登录 scode，且该会话的权限适合任务。请使用专供监听的会话；不要同时在另一个进程操作同一会话。接收器不会增加 scode 权限。不要猜会话路径或自动选择最近一次会话。
+接收器启动 `scode acp`，通过 ACP 的 `session/load` 加载指定会话，再用 `session/prompt` 交付事件。只有会话返回 `end_turn` 才确认；交互权限请求会被取消并保留未确认批次。需要机器已安装并配置 scode，且该会话的权限适合任务。请使用专供监听的会话；不要同时在另一个进程操作同一会话。接收器不会增加 scode 权限。不要猜会话路径或自动选择最近一次会话。
+
+默认使用 scode 配置；需要指定模型或认证模式时，可加 `--scode-args-json '["--auth","api-key","--model","sonnet"]'`。这里只放 scode 参数，API Key 仍保存在 scode 的凭据配置里。
 
 ## 可靠性与运行方式
 

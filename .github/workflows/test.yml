@@ -33,7 +33,7 @@ jobs:
         run: node tests/test_make_qr.js
 
       - name: Durable agent receiver retries and lease lifecycle
-        run: node --test tests/test_agent_watch.js
+        run: node --test tests/test_agent_watch.js tests/test_scode_receive.js
 
       - name: Redirect-follow regression
         run: node test/redirect_follow.test.js
