@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.3.6
+version: 1.4.0
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.3.6
+  version: 1.4.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -68,6 +68,8 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 ## 路由判定顺序（唯一路由依据）
 
 入口文件只负责判断用户意图、选择需要阅读的 workflow。不要一次性读取所有 `workflows/*.md`；只读取当前任务命中的子文件。
+
+持续监听评论、接收持久通知或唤醒 scode / 其他 Agent：先读 `workflows/environment-and-credentials.md`，再读 `workflows/agent-notifications.md`，使用 `scripts/agent_watch.js`。普通评论查看和单次处理按以下路由执行，不启动常驻监听。
 
 按以下顺序从上到下判断，**命中第一条即停止**，按该条给出的阅读顺序执行：
 
