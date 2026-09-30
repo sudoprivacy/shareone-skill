@@ -69,6 +69,8 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 
 入口文件只负责判断用户意图、选择需要阅读的 workflow。不要一次性读取所有 `workflows/*.md`；只读取当前任务命中的子文件。
 
+持续监听评论、接收持久通知或唤醒 scode / 其他 Agent：先读 `workflows/environment-and-credentials.md`，再读 `workflows/agent-notifications.md`，使用 `scripts/agent_watch.js`。普通评论查看和单次处理按以下路由执行，不启动常驻监听。
+
 按以下顺序从上到下判断，**命中第一条即停止**，按该条给出的阅读顺序执行：
 
 1. **删除/清除/移除/重置 ShareOne API Key**
