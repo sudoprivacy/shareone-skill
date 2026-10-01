@@ -2,7 +2,7 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.4.0
+version: 1.4.1
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
@@ -10,7 +10,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.4.0
+  version: 1.4.1
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -96,7 +96,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
    → 读 `workflows/download-file.md`。下载脚本会在已有凭据时优先尝试 owner 下载，没有凭据时自动走公开下载；不要为了普通下载强制配置 API Key。
 
 8. **只查看、拉取、总结 ShareOne 链接评论（用户没有要求修改）**
-   → 读 `workflows/comments-view.md`。查看评论用 `comment_list.js`，走公开接口，无需凭据检查。
+   → 读 `workflows/comments-view.md`。单次查看用 `comment_list.js`，走公开接口，无需凭据检查；维护评论缓存时使用该 workflow 的增量查询步骤。
 
 9. **处理评论、根据评论修改页面、修复 ShareOne 链接内容**
    → 先读 `workflows/environment-and-credentials.md`，再读 `workflows/comments-process.md`（其中的重新发布步骤会引用 `workflows/publish-text-page.md`），最后读 `workflows/result-and-errors.md`。

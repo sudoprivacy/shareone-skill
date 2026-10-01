@@ -47,3 +47,18 @@ node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/summary" --p
 ```
 
 返回 `open == 0` 时无需拉全量评论。
+
+## 5. 增量维护评论缓存
+
+需要持续更新一个评论视图时，可以复用通用请求脚本：
+
+```bash
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/changes" --public
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/changes?cursor=<URL_ENCODED_CURSOR>&limit=100" --public
+```
+
+首次省略 `cursor`，用 `reset=true` 的 `comments` 替换缓存；包括上线前已有的评论。后续按顶层 ID 替换返回的完整线程（含回复），删除 `deleted_ids`，应用成功后保存 `next_cursor`。`has_more=true` 时立即继续；`limit` 是事件数，默认 100、最大 200。线程反映当前状态，同一批可幂等重放。400 表示游标无效，应重新获取快照。游标只对原分享有效。
+
+此接口每次检查页面密码/登录要求。`--public` 适用于没有访问门槛的分享；有 owner/协作者凭据时省略 `--public`。浏览器访问者使用页面授权 Cookie；本脚本不会代填页面密码。旧 `comment_list.js` 的单次查看方式不变。
+
+该接口只读，不注册消费者或确认事件。需要可靠接收通知并唤醒 Agent 时，使用 `agent-notifications.md` 的持久消费者流程。
