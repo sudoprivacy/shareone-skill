@@ -8,7 +8,7 @@
 | --- | --- |
 | 公开 GitHub `.html` / `.md` / `.txt` 文件 | 可直接绑定 HTTPS `github.com/.../blob/...` 或 `raw.githubusercontent.com` 文件 URL；blob 自动转 raw |
 | GitHub 私有仓库 | 当前没有仓库凭据接入，不能假定 ShareOne 能读取；保留仓库原有访问范围，不把 token 拼进 URL |
-| GitLab / 企业 GitLab | 版本管理方向相同，但当前域名白名单不含 GitLab；需部署方接入域名、服务端网络可达性和仓库认证后才可绑定 |
+| GitLab / 企业 GitLab | 当前域名白名单不含 GitLab；接入域名、服务端网络和仓库认证后才可绑定 remote URL。已有仓库也可按 §3.1 手动发布选定版本的本地文件 |
 | 本地文件上传 | 按原发布流程保存当前内容；不会自动建立 Git 历史或绑定仓库 |
 | ShareOne 内链 pointer | 多个分享同步同一份源内容，可各设密码/水印；不保存源的历史版本 |
 
@@ -53,6 +53,17 @@ node scripts/download_share.js "<REF>" --save
 检查刷新 JSON 中的 `remote_last_error`，并核对下载内容包含预期修改。只有 HTTP 成功或出现 `SHARE_REFRESHED` 不能证明已更新：抓取失败时可能继续保留旧缓存。自然刷新只在打开渲染页时触发，受 60 秒下限、无 ETag 时 10 分钟 TTL 限制；下载本身不会触发刷新。
 
 远程源页面不能通过上传本地副本覆盖正文，会返回 `REMOTE_SOURCE_BOUND`。先修改源头再刷新；不为绕过错误自动解绑。若没有仓库写权限，交付修改建议或按已有权限创建 PR，说明尚待合并/同步的步骤。
+
+### 3.1 从 Git 仓库手动发布本地文件
+
+GitLab 或私有仓库尚不能直连时，若用户采用手动同步，可用已有仓库访问权限取出选定 commit 的文本文件，再走本地发布流程。文件历史仍保存在 Git 仓库；ShareOne 不会自动跟随后续提交。
+
+```bash
+# 更新已有、未绑定 remote URL 的分享；首次创建才省略 --share-id
+node scripts/publish.js "<LOCAL_REPO_FILE>" --share-id <REF>
+```
+
+确认发布文件与选定 commit 一致，避免把未提交的本地修改标成该 commit。按 `publish-text-page.md` 验收原分享，并记录源仓库/commit 链接。以后换版或回退时，取出所选版本再更新同一分享；不为采用此路径自动解绑已有 remote 源。
 
 ## 4. 查看历史与回退
 
