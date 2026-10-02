@@ -28,7 +28,7 @@
 
 - 有 `share_id`：执行更新。
 - 没有 `share_id`：执行首次创建。
-- **例外（优先于上面两条）**：如果当前处于评论处理流程（`comments-process.md`），或当前目录存在 `.shareone_active_task` 文件，说明目标 share 已经确定——必须读取该文件内容作为 `share_id` 执行 PUT 更新，**禁止走首次创建**。“想不起 share_id”不等于“没有 share_id”。
+- **例外（优先于上面两条）**：如果当前处于评论处理流程（`comments-process.md`），或当前目录存在 `.shareone_active_task` 文件，说明目标 share 已经确定——读取该文件锁定原分享，按内容来源执行 PUT 更新或修改源头后刷新，**禁止走首次创建**。“想不起 share_id”不等于“没有 share_id”。
 
 脚本另有两道磁盘防线兜底，触发时按提示修正命令，不要绕过：
 
@@ -53,10 +53,12 @@ node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" [--passwo
 
 当用户要求从 GitHub 等远程 URL 发布内容时，使用 `upload_page.js`（不是 `publish.js`，因为没有本地文件供类型检测）的 `--remote-url` 参数。服务端自动拉取内容并存储快照，后续访问时自动检查更新。
 
+Git 源的版本选择、更新和回退先读 [git-backed-versions.md](git-backed-versions.md)：历史由源仓库维护，分支 URL 跟随更新，完整 commit URL 固定文件版本。当前 GitLab 和私有仓库认证尚未接入。
+
 远程 URL 发布的安全自检只基于用户请求、URL、文件名和显式参数；除非远程内容已经在当前上下文中，不要为了自检主动 fetch、下载、解析或转换远程内容。深度内容检查由服务端拉取后的审核负责。
 
 ```bash
-node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/main/docs/report.html” [--filename “OPTIONAL_NAME”] [--password “OPTIONAL_PASSWORD”] [--slug “OPTIONAL_SLUG”]
+node scripts/upload_page.js --remote-url "https://github.com/org/repo/blob/main/docs/report.html" [--filename "OPTIONAL_NAME"] [--password "OPTIONAL_PASSWORD"] [--slug "OPTIONAL_SLUG"]
 ```
 
 规则：
@@ -69,9 +71,9 @@ node scripts/upload_page.js --remote-url “https://github.com/org/repo/blob/mai
 - 默认不开启评论。
 - 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
 
-### ShareOne 内链 pointer 模式（多版本分发）
+### ShareOne 内链 pointer 模式（多份定制分享）
 
-当 `--remote-url` 指向另一个 ShareOne 链接时，创建的是一个 pointer share：内容从源 share 同步，但有自己的密码、水印和短链接。典型用途：一份源文档 + N 个定制化分发版本。
+当 `--remote-url` 指向另一个 ShareOne 链接时，创建的是一个 pointer share：内容从源 share 同步，但有自己的密码、水印和短链接。典型用途：一份源文档 + N 个定制分享；这些分享跟随同一份内容，不保存历史版本。
 
 ```bash
 # 源文档已存在：https://s.shareone.vip/s/sudowork-bp
@@ -89,6 +91,8 @@ node scripts/upload_page.js --remote-url "https://s.shareone.vip/s/sudowork-bp" 
 ```
 
 ## 6. 更新已有链接 (PUT)
+
+本节上传本地正文只适用于未绑定远程源的页面。遇到 `INFO:REMOTE_SOURCE` / `HINT:EDIT_AT_SOURCE` 或 `REMOTE_SOURCE_BOUND`，先按 [git-backed-versions.md](git-backed-versions.md) 修改 Git 源并刷新；ShareOne 内链则修改源 share 再刷新。不要自动解绑或另建分享。
 
 如果用户只要求修改已有链接的水印、访问密码、自定义短链接或评论开关，不要执行本节，不要下载原文件；改读 `update-share-settings.md`，使用 `update_share_settings.js` 只更新元数据。
 

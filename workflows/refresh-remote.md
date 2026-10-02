@@ -2,6 +2,8 @@
 
 当用户要求刷新/拉取某个绑定了远程源 URL（GitHub 等）的分享的最新内容时读取本文件——典型场景：用户刚 push 到源站，想让 ShareOne 立即同步。
 
+刷新读取的是**当前绑定的 URL**：分支 URL 可拉取该分支的新内容，固定 commit 的 URL 仍读取该 commit。要更换 commit 或回退版本，读 [git-backed-versions.md](git-backed-versions.md)，用原分享 ID 更新源 URL。文件历史和 diff 由 GitHub / GitLab 管理；当前 GitLab 尚需接入。
+
 ## 背景（为什么需要显式刷新）
 
 remote 页面的刷新是**懒的、且只在渲染路径触发**：只有打开渲染页（`/s/<ref>` 等）才会 refetch，且有节流（60s 硬下限、无 ETag 时 10 分钟 TTL）。`download`/`/file/<id>` 只服务上次缓存的 snapshot，不会 refetch。所以 push 完直接下载常常还是旧内容。本命令绕过节流立即拉取。
