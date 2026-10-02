@@ -2,15 +2,15 @@
 name: shareone
 slug: shareone
 displayName: ShareOne
-version: 1.4.1
+version: 1.4.2
 summary: Host HTML pages and share PDF/Word/PPT docs with short links
 tags: [shareone, publish, sharing, hosting, html, upload]
-description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use when publishing pages/docs, adding passwords/watermarks, comments, downloads, or updates.
+description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use for publishing, passwords/watermarks, comments, downloads, updates, or Git-backed remote sources for ShareOne content.
 license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.4.1
+  version: 1.4.2
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -26,6 +26,12 @@ metadata:
 Host HTML/Markdown pages and share PDF, Word, and PowerPoint documents with ShareOne public short links. Covers page publishing, document sharing, password protection, watermarks, review comments, downloads, and updates to existing shares.
 
 这个 Skill 允许 AI Agent 将当前生成的历史会话以及 HTML/Markdown/TXT/PDF/PPT 等文件发布到 ShareOne 线上托管服务，并为用户生成一个持久化的公网分享链接；也可以对已有 ShareOne 链接执行下载、内容更新、设置修改和评论处理。
+
+## 内容版本管理决策
+
+ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分支、评审和回退在源仓库完成，ShareOne 负责展示、分享、访问控制和评论协作。`remote_url` 的 snapshot 是当前缓存，ShareOne 不维护独立的文件版本库。
+
+涉及 ShareOne 内容的 Git 源、版本选择、历史或回退时，先读 [workflows/git-backed-versions.md](workflows/git-backed-versions.md)，再按下方路由执行发布、刷新或评论处理。该工作流包含跟随分支、固定 commit、切换版本与验收命令。**当前可直接使用公开 GitHub 文本文件；GitLab 和私有仓库认证仍需接入，不能把产品方向当作已支持能力。** 普通本地文件上传仍按原流程执行，不自行迁移到 Git。
 
 ## 脚本执行基准
 
@@ -114,7 +120,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - `/s/<share_id>` 是最终给用户访问的分享链接，**不是上传 API endpoint**。不要把 `/s/<share_id>` 当作发布地址，也不要直接向 `/s/<share_id>` PUT/POST 文件。
 - 路径前缀与内容类型的对应关系：`/s/`、`/md/` 是文本/HTML/Markdown 页面；`/pdf/`、`/ppt/`、`/word/` 是二进制文件。元数据更新时 `update_share_settings.js` 会按此前缀自动选择 endpoint，裸 `share_id` 或 slug 由脚本先试页面 endpoint、必要时回退文件 endpoint，整个过程不下载源文件。
 - 文本页里 `/s/<ref>` 与 `/md/<ref>` **等价**：前缀不绑定、也不校验内容类型，浏览路由一律按 ref 解析 share、按 share 真实 content-type 渲染。因此文本页可以就地把 content-type 从 md 升级成 html（`.md → .html`，如把 ASCII 图升级成 Mermaid），URL（含老的 `/md/<slug>`）一字不变、评论保留——见 `workflows/publish-text-page.md` §6b。升级用 `--share-id` 更新，**绝不 `--force-new`**。
-- 内容发布与更新统一使用 `publish.js`，脚本会按文件类型自动分发到文本通道或二进制直传通道（stderr 输出 `INFO:CHANNEL:text|binary`），不需要也不应该自行选择底层上传脚本。不要因为会话里存在旧的 `/s/<share_id>` 就把二进制文件改走文本页面 PUT；二进制文件传 `--share-id` 会被脚本拒绝（`ERROR:BINARY_NO_SHARE_ID`）。
+- 本地文件发布与更新统一使用 `publish.js`，脚本按文件类型自动分发（stderr 输出 `INFO:CHANNEL:text|binary`）。远程源例外：使用 `upload_page.js --remote-url` 创建或更换源 URL，`refresh_share.js` 刷新已有源。不要因为会话里存在旧的 `/s/<share_id>` 就把二进制文件改走文本页面 PUT；二进制文件传 `--share-id` 会被脚本拒绝（`ERROR:BINARY_NO_SHARE_ID`）。
 - 如果当前会话中已经为同一个文本/HTML 文件生成过 ShareOne 链接，可复用之前的 `share_id` 执行文本页面 PUT 更新；否则执行首次创建。
 - 非 owner 下载要求链接已开启允许下载；若脚本输出 `ERROR:DOWNLOAD_NOT_ALLOWED`，直接提示用户让链接 owner 先开启允许下载。
 
@@ -148,7 +154,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 开启评论的页面**不要用 MutationObserver 监听自己的输出来触发重绘**。ShareOne 会往页面里注入评论桥（样式、覆盖层、高亮包裹），这本身就是 DOM 变化；页面若据此重绘、重绘又改 DOM，会自持成无限循环，页面直接跑飞（实测：关评论 render 1 次，开评论 502 次）。确实需要按变化重绘时，用内容签名门控：先算出这一帧该画什么，和上一帧比，一样就不画。同理，**不要在 `pointerdown` 里无条件 `setPointerCapture`** —— 指针被容器捕获后，`click` 会派发给捕获者而不是被点的元素，页面里所有节点都点不动，而元素还在、`elementFromPoint` 也正常，很难查；平移交互应等 `pointermove` 超过 3–5px 再捕获。
 - 开启评论、而**可评论的东西不是 DOM 元素**时（canvas 图、地图、3D 视图、虚拟滚动大表格——一千个节点就一个 `<canvas>`），用 `window.__SHAREONE__.anchors`：页面自己声明什么可评论、以及它现在在哪，ShareOne 不解析。不用它的话，所有评论都会锚到那一个 `<canvas>` 上、标签一律 `"canvas"`、而且因为那个元素永远解析得到，"锚点丢失"一次都不会提示——看起来成功而实际全错。最小用法：`anchors.select({id, label}, rect)` 报告用户选中了什么；`anchors.report([{id, state:"visible", rect} | {id, state:"hidden"} | {id, state:"missing"}])` 在自己布局变化时推位置；`anchors.on("resync"|"reveal"|"hittest", fn)` 应答 ShareOne 的询问。`hidden`（当前视图没画，读者可换视图）和 `missing`（内容真没了）**必须分开**，合并等于让页面替 ShareOne 宣称内容被删了。锚点是**一组 id 不是矩形**（矩形重排后指向另一批东西，而且永远"解析得到"）。现成参考页：`templates/canvas-comments.html`（一个 canvas 图，点节点评论、框选一片评论、收起明细时评论显示为"不在当前视图"、点评论卡片会让页面自己展开回来）——照着改节点和绘制即可，别动那几处带注释的契约代码。完整接口与全部约束见后端 `agent.md` §14b。
 - 开启评论且页面会自己重绘（图表、流程图、看板、任何切换视图就重建 DOM 的页面）时，给每个可评论元素加一个稳定的 `data-*` id，例如 `<g class="node" data-node-id="委外cap">`。ShareOne 的区域评论以应用自己给的这个 id 作锚，重绘后评论自动跟回同一个元素；没有 id 时只能退回"第几个同名标签"的结构路径，而重绘必然让它失效，评论会变成"锚点丢失"。id 在同一页内必须唯一（命中多个元素的 id 会被拒绝，宁可报丢失也不锚错元素），且在重绘前后保持不变——用业务含义命名，别用渲染顺序生成。
-- 评论处理必须形成闭环：认领、修改、重新发布，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于真正无关/无法处理的评论。
+- 评论处理必须形成闭环：认领、修改源内容、同步原分享并验证，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。绑定 Git 源的页面修改仓库后刷新，具体见 `comments-process.md` 和 `git-backed-versions.md`。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于真正无关/无法处理的评论。
 
 ## 最终回复前检查清单
 

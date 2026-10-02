@@ -44,7 +44,12 @@ node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/<COMMENT_ID>
 node scripts/download_share.js "<REF>" --task-anchor
 ```
 
-`--task-anchor` 会自动完成三件事：写入 `.shareone_active_task` 锚点（stderr 输出 `ANCHOR_WRITTEN:`）、按服务端文件名的扩展名把源内容保存为 `shareone_<REF>_source.<ext>`（stdout 输出 `SAVED:<本地文件名>`）、在 stderr 输出 `INFO:FILENAME:`（原始文件名，步骤 4 要用）和 `INFO:CONTENT_TYPE:`。后续编辑就改 `SAVED:` 给出的这个本地文件——文件名本身携带目标 share，即使对话上下文丢失也能从文件名恢复 `<REF>`。已配置 owner API Key 时脚本自动走 owner 下载接口，不受密码和下载开关限制。
+`--task-anchor` 会自动完成三件事：写入 `.shareone_active_task` 锚点（stderr 输出 `ANCHOR_WRITTEN:`）、按服务端文件名的扩展名把源内容保存为 `shareone_<REF>_source.<ext>`（stdout 输出 `SAVED:<本地文件名>`）、在 stderr 输出 `INFO:FILENAME:`（原始文件名，步骤 4 要用）和 `INFO:CONTENT_TYPE:`。文件名携带目标 share，即使对话上下文丢失也能恢复 `<REF>`。已配置 owner API Key 时脚本自动走 owner 下载接口，不受密码和下载开关限制。
+
+**根据下载信息选择修改位置：**
+
+- 未绑定远程源：编辑 `SAVED:` 给出的本地文件，按步骤 4A 更新原分享。
+- 出现 `INFO:REMOTE_SOURCE` / `HINT:EDIT_AT_SOURCE`：下载的是远程源的缓存副本。先读 [git-backed-versions.md](git-backed-versions.md)，在对应 Git 仓库修改，按步骤 4B 同步原分享。若源是另一个 ShareOne 分享，则修改那个源 share 后刷新当前分享；保留当前 `.shareone_active_task` 作为回复目标，不用它替代源 share 的 ID。
 
 ### 步骤 3：精准应用修改
 
@@ -54,7 +59,9 @@ node scripts/download_share.js "<REF>" --task-anchor
 - 理解结构性意图：评论可能是“把这部分挪到底部 / 删掉这个区块 / 加个图标”，先定位再做结构变更。
 - 如果在当前源文件里无论如何都找不到对应位置，不要瞎改，直接走 dismissed 流程，并用 note 告诉用户：“源文件结构已变更，无法定位你这条关于 XXX 的评论”。
 
-### 步骤 4：重新发布（必须 PUT 更新，禁止新建链接）
+### 步骤 4：更新并验收原分享（保留目标 ID）
+
+#### 4A. 未绑定远程源：PUT 上传正文
 
 脚本选择说明：更新**内容**只能用 `publish.js --share-id`（带 `--share-id` 时执行的是 PUT 内容更新，不是创建）；`update_share_settings.js` 只能改密码/水印/短链/评论开关等元数据，**无法替换页面内容**，本步骤不要使用它。
 
@@ -72,6 +79,12 @@ node scripts/publish.js "<步骤 2 SAVED: 给出的本地文件>" --filename "<I
 - 如果脚本输出 `ERROR:ACTIVE_SHARE_TASK`，说明漏传了 `--share-id`，按错误提示补上后重试。
 
 评论闭环中的重新发布属于对已有链接的更新，**不需要**向用户展示发布前安全提示或等待确认（规则见入口 `SKILL.md`）。
+
+#### 4B. 绑定远程源：修改源头后刷新
+
+Git 源按仓库现有流程提交、评审和合并到绑定分支，然后执行 `node scripts/refresh_share.js "<REF>"`。固定 commit 的分享，先按 `git-backed-versions.md` 用原 `--share-id` 换成已选定的新 commit URL。ShareOne 内链则更新源 share 后刷新当前分享。
+
+核对 `remote_last_error` 并下载确认预期修改已进入原分享，再执行步骤 5。不要对远程源页面用 `publish.js` 上传缓存副本；遇到 `REMOTE_SOURCE_BOUND` 不自动解绑。没有源仓库权限、PR 尚待合并或同步失败时，说明剩余步骤，用 `open-need-input` 保持待处理。可附修复 commit/PR 链接，但当前评论没有自动绑定创建时的 commit。
 
 ### 步骤 5：回复评论并**强制表态**（一条命令，`--state` 必填）
 
