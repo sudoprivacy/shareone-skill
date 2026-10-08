@@ -1,4 +1,6 @@
 const {
+    emitError,
+    printShareOneScriptError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     isSudowork,
@@ -9,12 +11,10 @@ const {
 const apiKey = process.argv[2];
 if (!apiKey || process.argv.length > 3) {
     if (process.argv.length > 3) {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[3]}`);
+        emitError('UNKNOWN_ARGUMENT', process.argv[3]);
     } else {
-        console.error("ERROR:MISSING_VALUE:<api_key>");
+        emitError('MISSING_VALUE', '<api_key>', {hint: 'node save_api_key.js <api_key>'});
     }
-    console.error("Usage: node save_api_key.js <api_key>");
-    process.exit(1);
 }
 
 async function saveApiKey() {
@@ -44,6 +44,5 @@ async function saveApiKey() {
 }
 
 saveApiKey().catch((error) => {
-    console.error(`ERROR:${error.message}`);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

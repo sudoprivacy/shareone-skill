@@ -57,3 +57,7 @@ node scripts/agent_watch.js --consumer scode-review --share '<分享链接>' \
 | `DELETE /<name>` | 删除消费者；需要重置进度时明确执行再注册 |
 
 读取不会确认。`ack` 不接受任意目标游标，过期/被替换的令牌返回 409。每个 owner 的事件有独立递增序号；不同 Agent 使用不同消费者名。当前事件不自动过期，删除消费者不会删事件；不承诺无限保存评论正文，事件中的引用可能已失效。
+
+## 防止重投产生重复写入
+
+事件按至少一次投递：处理成功后才 ACK。发布新页面、上传文件或回复评论时，使用稳定的 `--idempotency-key`，例如 `<event.id>.reply`；重试必须保留同一键和同一请求内容。回复脚本返回实际 `parent_status` / `parent_agent_stance`。幂等冲突时先检查原操作与资源状态，不要换键绕过冲突后重复创建；操作返回 409 busy 时按 `Retry-After` 等待。直接上传确认重试应保留原 `share_id`。

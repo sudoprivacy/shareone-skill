@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
+const { emitError } = require('./shareone_client');
 const fs = require('fs');
 const path = require('path');
 const {
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     extractShareRef,
+    printShareOneScriptError,
     requestShareOneBuffer,
     resolveDirectApiKey,
 } = require('./shareone_client');
@@ -27,9 +29,7 @@ function usage() {
 function nextValue(index, flag) {
     const value = args[index + 1];
     if (value === undefined || value.startsWith('--')) {
-        console.error(`ERROR:MISSING_VALUE:${flag}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:MISSING_VALUE:${flag}`);
     }
     return value;
 }
@@ -54,15 +54,13 @@ for (let i = 0; i < args.length; i++) {
     } else if (!args[i].startsWith('--') && !ref) {
         ref = args[i];
     } else {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${args[i]}`);
     }
 }
 
 if (!ref) {
     usage();
-    process.exit(1);
+    emitError('BAD_ARGS', 'Required arguments are missing.');
 }
 
 async function tryOwnerDownload(credentialMode) {
@@ -169,9 +167,7 @@ function saveDownload(result) {
 (async () => {
     const credentialMode = await detectCredentialMode();
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey && !publicOnly) {
-        console.error("ERROR:SUDOWORK_MANAGED_KEY");
-        console.error("Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。");
-        process.exit(1);
+        emitError("ERROR:SUDOWORK_MANAGED_KEY", ["Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。"].join('\n'));
     }
 
     const ownerResult = await tryOwnerDownload(credentialMode);
@@ -183,18 +179,5 @@ function saveDownload(result) {
         process.stdout.write(result.data);
     }
 })().catch((error) => {
-    let code = null;
-    try {
-        const parsed = JSON.parse(error.responseText || '{}');
-        const detail = parsed.detail || {};
-        code = typeof detail === 'string' ? detail : detail.code;
-    } catch (_) {
-        // Keep the original HTTP error if the response is not JSON.
-    }
-    if (code) {
-        console.error(`ERROR:${code}`);
-    } else {
-        console.error(`ERROR:${error.message}`);
-    }
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

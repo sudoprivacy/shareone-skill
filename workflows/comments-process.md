@@ -59,7 +59,7 @@ node scripts/download_share.js "<REF>" --task-anchor
 - 绝对不要用全局 `replace()` 或正则批量替换，会误伤其他同名文案。
 - 基于 DOM 结构精确定位：利用 `highlighter_data.startMeta.parentTagName`、`parentIndex`、`textOffset`，结合 `quote`（被选中原文）定位准确节点。
 - 理解结构性意图：评论可能是“把这部分挪到底部 / 删掉这个区块 / 加个图标”，先定位再做结构变更。
-- 如果在当前源文件里无论如何都找不到对应位置，不要瞎改，直接走 dismissed 流程，并用 note 告诉用户：“源文件结构已变更，无法定位你这条关于 XXX 的评论”。
+- 如果无法定位原文，先保留评论与原文，用 `comment_reply.js --state open-need-input` 说明缺少的信息并等待澄清。定位失败不能证明内容不存在，也不能成为 dismiss 的依据。
 
 ### 步骤 4：更新并验收原分享（保留目标 ID）
 
@@ -119,15 +119,15 @@ node scripts/comment_reply.js "<REF>" <COMMENT_ID> --content "已按你的建议
 node scripts/shareone_api_request.js "/api/v1/shares/<SHARE_ID>/comments/<COMMENT_ID>" --method DELETE
 ```
 
-## 3. 无法处理或与页面无关的评论
+## 3. 无关或垃圾评论
 
-**注意区分“不同意”与“无关”**：对你有异议但属于合理讨论的评论，用步骤 5 的 `--state open-disagree`（保持 open），**不要** dismiss。`dismiss` 只用于**真正无关/无法处理**的评论（例如指向了另一份分享、垃圾评论）——这是 owner 的否决动作：
+**注意区分“不同意”与“无关”**：对你有异议但属于合理讨论的评论，用步骤 5 的 `--state open-disagree`（保持 open），**不要** dismiss。`dismiss` 只用于**owner 确认的无关或垃圾评论**的评论（例如指向了另一份分享、垃圾评论）——这是 owner 的否决动作：
 
 ```bash
-node scripts/comment_resolve.js "<REF>" <COMMENT_ID> --dismiss --note "页面中没有此元素，可能指的是另一份分享"
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/<COMMENT_ID>/status" --method PUT --data '{"status":"dismissed","note":"owner 确认这是垃圾评论"}'
 ```
 
-输出 `COMMENT_DISMISSED:<id>` 即完成。（`comment_resolve.js` 为兼容保留；日常回复请优先用 `comment_reply.js --state`。）
+确认返回 JSON 的 `status` 为 `dismissed`。无法定位、权限不足、源 PR 待合并或刷新失败时，用 `open-need-input` 并说明原因。
 
 ## 4. 收尾：删除任务锚点
 
@@ -157,6 +157,6 @@ PUT /api/v1/shares/<REF>/comments/<COMMENT_ID>/resolve
 | 动手前先 `in_progress` | 让访问者看到“AI 在干活” |
 | 改完一定要 `POST` 一条 `author_role=agent` 的回复 | 闭环的“答复”部分，没有它就只是状态变化、不是对话 |
 | `note` 要写人话 | “已把按钮改成主色” 比 “Applied.” 有用 |
-| 不能处理就 `dismissed` + note | 不要让评论永远卡在 `open` |
+| 信息或权限不足时 `open-need-input` | 保留待办并说明需要的人类输入 |
 | 只对父评论改状态，回复不单独操作 | 状态语义属于 thread 整体 |
 | `unresolved` = `open + in_progress` | 拉单子默认用 `?status=unresolved` |

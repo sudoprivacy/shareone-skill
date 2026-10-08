@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const {
+    emitError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     getBaseUrl,
@@ -25,9 +26,7 @@ function usage() {
 function nextValue(index, flag) {
     const value = args[index + 1];
     if (value === undefined) {
-        console.error(`ERROR:MISSING_VALUE:${flag}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:MISSING_VALUE:${flag}`);
     }
     return value;
 }
@@ -50,35 +49,25 @@ for (let i = 0; i < args.length; i++) {
     } else if (!arg.startsWith('--') && !ref) {
         ref = arg;
     } else {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
     }
 }
 
 if (!ref) {
-    console.error('ERROR:MISSING_SHARE_REF');
-    usage();
-    process.exit(1);
+    emitError('ERROR:MISSING_SHARE_REF');
 }
 
 if (!action) {
-    console.error('ERROR:MISSING_ACTION');
-    console.error('Provide --action add, --action remove, or --action list.');
-    process.exit(1);
+    emitError('ERROR:MISSING_ACTION', ['Provide --action add, --action remove, or --action list.'].join('\n'));
 }
 
 const validActions = new Set(['add', 'remove', 'list']);
 if (!validActions.has(action)) {
-    console.error(`ERROR:INVALID_ACTION:${action}`);
-    console.error('--action must be one of: add, remove, list.');
-    process.exit(1);
+    emitError(`ERROR:INVALID_ACTION:${action}`, ['--action must be one of: add, remove, list.'].join('\n'));
 }
 
 if ((action === 'add' || action === 'remove') && usernames.length === 0) {
-    console.error(`ERROR:MISSING_USERNAMES`);
-    console.error(`--usernames is required for --action ${action}.`);
-    process.exit(1);
+    emitError(`ERROR:MISSING_USERNAMES`, [`--usernames is required for --action ${action}.`].join('\n'));
 }
 
 function parseRef(input) {
@@ -110,14 +99,11 @@ function parseRef(input) {
 (async () => {
     const credentialMode = await detectCredentialMode();
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey) {
-        console.error('ERROR:SUDOWORK_MANAGED_KEY');
-        console.error('Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
-        process.exit(1);
+        emitError('ERROR:SUDOWORK_MANAGED_KEY', ['Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。'].join('\n'));
     }
 
     if (credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(apiKey)) {
-        console.error('ERROR:KEY_NOT_FOUND');
-        process.exit(1);
+        emitError('ERROR:KEY_NOT_FOUND');
     }
 
     const shareRef = parseRef(ref);

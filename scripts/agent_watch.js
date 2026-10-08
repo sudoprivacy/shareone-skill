@@ -4,7 +4,7 @@
 const { spawn } = require('node:child_process');
 const { setTimeout: delay } = require('node:timers/promises');
 const path = require('node:path');
-const { requestShareOneJson, extractShareRef } = require('./shareone_client');
+const { requestShareOneJson, extractShareRef, printShareOneScriptError } = require('./shareone_client');
 
 function parseArgs(argv) {
     const opts = { start: 'beginning', once: false, allActors: false, timeoutSeconds: 1800, cwd: process.cwd() };
@@ -63,7 +63,7 @@ async function runHandler(opts, batch, renew, signal) {
     signal?.addEventListener('abort', abort, { once: true });
     const timeout = setTimeout(() => fail(new Error('Handler timed out; batch remains unacknowledged')), opts.timeoutSeconds * 1000);
     const heartbeat = setInterval(async () => {
-        if (renewing) return;
+        if (renewing || failure) return;
         renewing = true;
         try { await renew(); } catch { fail(new Error('Lease renewal failed; stopping handler for redelivery')); }
         finally { renewing = false; }
@@ -143,8 +143,7 @@ if (require.main === module) {
         }
         await watch(opts, controller.signal);
     })().catch(error => {
-        console.error(`ERROR:AGENT_WATCH:${error.statusCode ? `HTTP ${error.statusCode}` : error.message}`);
-        process.exitCode = 1;
+        process.exitCode = printShareOneScriptError(error);
     });
 }
 

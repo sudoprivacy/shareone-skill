@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const {
+    emitError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     getBaseUrl,
@@ -23,9 +24,7 @@ function usage() {
 function nextValue(index, flag) {
     const value = args[index + 1];
     if (value === undefined) {
-        console.error(`ERROR:MISSING_VALUE:${flag}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:MISSING_VALUE:${flag}`);
     }
     return value;
 }
@@ -33,9 +32,7 @@ function nextValue(index, flag) {
 function parseBoolean(value, flag) {
     if (value === 'true') return true;
     if (value === 'false') return false;
-    console.error(`ERROR:INVALID_BOOLEAN:${flag}`);
-    console.error(`${flag} must be true or false.`);
-    process.exit(1);
+    emitError(`ERROR:INVALID_BOOLEAN:${flag}`, [`${flag} must be true or false.`].join('\n'));
 }
 
 for (let i = 0; i < args.length; i++) {
@@ -67,21 +64,17 @@ for (let i = 0; i < args.length; i++) {
     } else if (!arg.startsWith('--') && !ref) {
         ref = arg;
     } else {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
     }
 }
 
 if (!ref) {
     usage();
-    process.exit(1);
+    emitError('BAD_ARGS', 'Required arguments are missing.');
 }
 
 if (Object.keys(payload).length === 0) {
-    console.error('ERROR:NO_SETTINGS_PROVIDED');
-    console.error('Provide at least one of --watermark, --password, --slug, --allow-comments, or --allow-data.');
-    process.exit(1);
+    emitError('ERROR:NO_SETTINGS_PROVIDED', ['Provide at least one of --watermark, --password, --slug, --allow-comments, or --allow-data.'].join('\n'));
 }
 
 function parseRef(input) {
@@ -152,14 +145,11 @@ async function putSettings(apiPath) {
 (async () => {
     const credentialMode = await detectCredentialMode();
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey && !dryRun) {
-        console.error('ERROR:SUDOWORK_MANAGED_KEY');
-        console.error('Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
-        process.exit(1);
+        emitError('ERROR:SUDOWORK_MANAGED_KEY', ['Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。'].join('\n'));
     }
 
     if (!dryRun && credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(apiKey)) {
-        console.error('ERROR:KEY_NOT_FOUND');
-        process.exit(1);
+        emitError('ERROR:KEY_NOT_FOUND');
     }
 
     const parsed = parseRef(ref);

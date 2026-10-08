@@ -4,6 +4,7 @@ const net = require('net');
 const tls = require('tls');
 const fs = require('fs');
 const path = require('path');
+const API_CONTRACT = require('./api_contract.json');
 
 const DEFAULT_BASE_URL = 'https://shareone.app';
 const CREDENTIALS_FILENAME = '.shareone_credentials';
@@ -131,7 +132,7 @@ const MAX_REDIRECTS = 5;
 
 // Header names that carry credentials; stripped when a redirect crosses hosts
 // so we never hand the API key to a different origin.
-const AUTH_HEADER_NAMES = ['x-api-key', 'authorization'];
+const AUTH_HEADER_NAMES = ['x-api-key', 'authorization', 'cookie'];
 
 function stripAuthHeaders(headers) {
     const next = {};
@@ -254,6 +255,10 @@ function requestBuffer(url, options = {}, body = null, redirectsLeft = MAX_REDIR
                 const error = new Error(`HTTP ${res.statusCode}: ${text}`);
                 error.statusCode = res.statusCode;
                 error.responseText = text;
+                error.responseHeaders = res.headers;
+                error.requestMethod = options.method || 'GET';
+                error.requestUrl = url;
+                error.replaySafe = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'].includes(String(error.requestMethod).toUpperCase());
                 reject(error);
             });
         };
@@ -279,10 +284,17 @@ function requestBuffer(url, options = {}, body = null, redirectsLeft = MAX_REDIR
             req = client.request(target, reqOptions, handleResponse);
         }
 
-        req.on('error', reject);
+        req.on('error', error => {
+            error.requestMethod = options.method || 'GET';
+            error.requestUrl = url;
+            error.replaySafe = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'].includes(String(error.requestMethod).toUpperCase());
+            reject(error);
+        });
         if (options.timeoutMs) {
             req.setTimeout(options.timeoutMs, () => {
-                req.destroy(new Error('Request timed out'));
+                const error = new Error('Request timed out');
+                error.code = 'ETIMEDOUT';
+                req.destroy(error);
             });
         }
         if (body) req.write(body);
@@ -450,7 +462,17 @@ async function buildShareOneRequest(apiPath, options = {}) {
 
 async function requestShareOneBuffer(apiPath, options = {}, body = null) {
     const built = await buildShareOneRequest(apiPath, options);
-    return requestBuffer(built.url, built.options, body);
+    try {
+        return await requestBuffer(built.url, built.options, body);
+    } catch (error) {
+        const method = String(options.method || 'GET').toUpperCase();
+        const key = Object.entries(options.headers || {}).find(([name]) => name.toLowerCase() === 'idempotency-key');
+        const pathName = new URL(appendPath(getBaseUrl(), apiPath)).pathname;
+        const supported = API_CONTRACT.idempotency_operations.some(op => op.method === method &&
+            new RegExp('^' + op.path.replace(/\{[^}]+\}/g, '[^/]+') + '$').test(pathName));
+        error.replaySafe = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'].includes(method) || Boolean(key && supported);
+        throw error;
+    }
 }
 
 async function requestShareOneJson(apiPath, options = {}, payload = null) {
@@ -498,9 +520,16 @@ function isSudoworkMissingKeyError(error) {
 
 function isAuthFailedError(error) {
     if (!error) return false;
-    if (error.statusCode === 401 || error.statusCode === 403) return true;
+    const body = parseErrorBody(error);
+    const code = body.error_code || (body.detail && body.detail.code);
+    if (code && API_CONTRACT.errors[code]) return API_CONTRACT.errors[code].category === 'auth_failed';
     const detail = getErrorDetail(error);
-    return /Invalid API Key|Inactive user|unauthorized|forbidden|权限不足|无效/i.test(detail || error.message || '');
+    if (/password|login required|email.gate/i.test(detail)) return false;
+    return error.statusCode === 401 || /Invalid API Key|Inactive user/i.test(detail);
+}
+
+function parseErrorBody(error) {
+    try { return JSON.parse(error.responseText || '{}'); } catch (_) { return {}; }
 }
 
 // --- Error steering (cli-steering rules 7 + 5b) --------------------------
@@ -511,6 +540,8 @@ const ERROR_CATEGORY_META = {
     validation: { exit: 2, retryable: false },  // bad/missing args — fix the call
     not_found: { exit: 4, retryable: false },
     conflict: { exit: 5, retryable: false },     // already exists / precondition
+    permission: { exit: 6, retryable: false },
+    access_gate: { exit: 6, retryable: false },
     auth_failed: { exit: 7, retryable: false },  // re-auth, don't retry blindly
     rate_limited: { exit: 8, retryable: true },  // back off and retry
     transient: { exit: 9, retryable: true },     // 5xx / network — retry
@@ -519,8 +550,13 @@ const ERROR_CATEGORY_META = {
 
 const ERROR_CODE_CATEGORY = {
     UNKNOWN_ARGUMENT: 'validation', MISSING_VALUE: 'validation', INVALID_BOOLEAN: 'validation',
+    BAD_ARGS: 'validation', BAD_STATUS: 'validation', BAD_JSON_MODE: 'validation',
+    MISSING_EMAIL: 'validation', MISSING_CODE: 'validation', INVALID_CODE_FORMAT: 'validation', NO_ACTION: 'validation',
+    ACTIVE_SHARE_TASK: 'conflict', FILE_PREVIOUSLY_PUBLISHED: 'conflict', EXISTING_KEY_CONFLICT: 'conflict',
+    DATA_FILE_UNREADABLE: 'not_found', UPDATE_VERIFY_FAILED: 'conflict',
     INVALID_STATE: 'validation', STATE_REQUIRED: 'validation', CONTENT_REQUIRED: 'validation',
     NO_SETTINGS_PROVIDED: 'validation', OPTION_NOT_SUPPORTED: 'validation',
+    MISSING_SHARE_REF: 'validation', MISSING_ACTION: 'validation', INVALID_ACTION: 'validation', MISSING_USERNAMES: 'validation',
     LOOKS_LIKE_SHARE_LINK: 'validation', IS_REPLY: 'validation', INVALID_RESPONSE: 'validation',
     BINARY_NO_ALLOW_COMMENTS: 'validation', BINARY_NO_ALLOW_DATA: 'validation',
     BINARY_NO_SHARE_ID: 'validation', DOWNLOAD_NOT_ALLOWED: 'validation',
@@ -535,7 +571,7 @@ const ERROR_HINTS = {
     STATE_REQUIRED: '重跑并加 --state：resolved-agree | open-disagree | open-need-input。',
     INVALID_STATE: '--state 只能是 resolved-agree | open-disagree | open-need-input。',
     KEY_NOT_FOUND: '先运行 ensure_credentials.js 配置/创建 API Key，再重试。',
-    AUTH_FAILED: 'API Key 无效或过期：用 save_api_key.js 更新，或 create_guest_key.js 新建。',
+    AUTH_FAILED: 'Check or update the existing account key; preserve the identity that owns the share.',
     SUDOWORK_ENV_OK_KEY_NOT_FOUND: '先运行 check_api_key.js，再用 save_api_key.js / create_guest_key.js 设置 Key。',
     RATE_LIMIT_EXCEEDED: '触发限流：退避几秒后重试。',
     CUSTOM_SLUG_TAKEN: '换一个 --slug；若这是你自己删掉的旧链接，直接重发同名 slug 即可复用。',
@@ -545,14 +581,24 @@ const ERROR_HINTS = {
 // Print the ERROR/message/HINT/RETRYABLE envelope for `code`; return the semantic
 // exit code (does not exit — caller decides). `hint`/`retryable` override the map.
 function _emitErrorEnvelope(code, message, opts = {}) {
-    const category = opts.category || ERROR_CODE_CATEGORY[code] || 'error';
+    const parts = String(code).replace(/^ERROR:/, '').split(':');
+    code = parts.shift();
+    if (!message && parts.length) message = parts.join(':');
+    const spec = API_CONTRACT.errors[code] || {};
+    const category = opts.category || spec.category || ERROR_CODE_CATEGORY[code] || 'error';
     const meta = ERROR_CATEGORY_META[category] || ERROR_CATEGORY_META.error;
     console.error(`ERROR:${code}`);
     if (message) console.error(message);
-    const hint = opts.hint != null ? opts.hint : ERROR_HINTS[code];
+    const hint = opts.hint != null ? opts.hint : (spec.hint || ERROR_HINTS[code]);
     if (hint) console.error(`HINT:${hint}`);
-    console.error(`RETRYABLE:${opts.retryable != null ? opts.retryable : meta.retryable}`);
-    return opts.exit != null ? opts.exit : meta.exit;
+    const retryable = opts.retryable != null ? opts.retryable : (spec.retryable ?? meta.retryable);
+    const exit = opts.exit != null ? opts.exit : meta.exit;
+    console.error(`RETRYABLE:${retryable}`);
+    if (opts.retryAfter != null) console.error(`RETRY_AFTER:${opts.retryAfter}`);
+    console.error('ERROR_JSON:' + JSON.stringify({ error_code: code, category, message: message || '',
+        hint: hint || '', retryable, exit_code: exit, ...(opts.status ? { status: opts.status } : {}),
+        ...(opts.detail != null ? { detail: opts.detail } : {}), ...(opts.retryAfter != null ? { retry_after: opts.retryAfter } : {}) }));
+    return exit;
 }
 
 // Terminal emitter for inline (validation/precondition) failure sites: emit the
@@ -569,28 +615,53 @@ function printShareOneScriptError(error) {
         return _emitErrorEnvelope('SUDOWORK_ENV_OK_KEY_NOT_FOUND',
             '请先运行 check_api_key.js，并按提示通过 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
     }
-    if (isAuthFailedError(error)) {
-        return _emitErrorEnvelope('AUTH_FAILED', 'API Key 无效或权限不足。');
-    }
     const status = error && error.statusCode;
-    if (status === 429) return _emitErrorEnvelope('RATE_LIMIT_EXCEEDED', error.message);
-    if (status && status >= 500) {
-        return _emitErrorEnvelope('SERVER_ERROR', error.message, { category: 'transient', retryable: true });
+    const body = parseErrorBody(error || {});
+    const detail = body.detail;
+    const fallback = {400: 'BAD_REQUEST', 401: 'AUTH_REQUIRED', 403: 'FORBIDDEN', 404: 'NOT_FOUND',
+        405: 'METHOD_NOT_ALLOWED', 413: 'PAYLOAD_TOO_LARGE', 415: 'UNSUPPORTED_MEDIA_TYPE',
+        409: 'CONFLICT', 410: 'OPERATION_RESOURCE_GONE', 422: 'VALIDATION_ERROR', 429: 'RATE_LIMIT_EXCEEDED'};
+    let code = body.error_code || (detail && detail.code) || fallback[status];
+    if (!code && status >= 500) code = 'SERVER_ERROR';
+    if (!code && error && error.code) code = error.code;
+    if (!code) {
+        const match = String(error && error.message || '').match(/^([A-Z][A-Z0-9_]+):/);
+        code = match ? match[1] : 'UNKNOWN_ERROR';
     }
-    // Uncategorized: keep the message as the token (legacy behavior), exit 1.
-    return _emitErrorEnvelope(String((error && error.message) || 'UNKNOWN'), '', { category: 'error' });
+    const transport = ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'EPIPE'].includes(code);
+    const spec = API_CONTRACT.errors[code];
+    const category = spec?.category || API_CONTRACT.errors[fallback[status]]?.category;
+    const retryable = Boolean(body.retryable ?? (spec ? spec.retryable : transport)) &&
+        (!(transport || status >= 500 || status === 429) || error.replaySafe !== false);
+    return _emitErrorEnvelope(code, getErrorDetail(error) || String(error && error.message || ''), {
+        ...(category ? {category} : {}),
+        ...(transport ? {category: 'transient', hint: 'Check connectivity and back off; retry writes only when replay is safe.'} : {}),
+        hint: body.hint || (transport ? 'Check connectivity and back off; retry writes only when replay is safe.' : undefined),
+        retryable, status, detail, retryAfter: error && error.responseHeaders && error.responseHeaders['retry-after'],
+    });
 }
 
-// Agent comment-reply lifecycle states — the single skill-side source of truth.
-// The SERVER (`AGENT_REPLY_STATES` in backend/routers/comments.py) is the
-// authoritative validator (422 on an invalid/missing state); this mirror exists
-// so comment_reply.js / comment_resolve.js never hardcode the state strings in
-// more than one place. Keys are the wire values; values are the human hint.
-const AGENT_REPLY_STATES = {
-    'resolved-agree': '同意并已处理 → 评论收敛为 resolved',
-    'open-disagree': '不同意（在 --content 里写清理由），但保持 open，把关闭权交回提出者（AI 不 dismiss）',
-    'open-need-input': '需要人类进一步澄清 → 保持 open',
-};
+// Generated from the server's authoritative lifecycle contract.
+const AGENT_REPLY_STATES = API_CONTRACT.agent_reply_states;
+
+function parseScriptArgs(options, positionalCount, usage) {
+    const args = process.argv.slice(2);
+    const values = {};
+    const positionals = [];
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === '--help') { console.log(usage); process.exit(0); }
+        if (arg.startsWith('--')) {
+            if (!options.includes(arg)) emitError('UNKNOWN_ARGUMENT', arg, {hint: usage});
+            const value = args[++i];
+            if (value === undefined || value.startsWith('--')) emitError('MISSING_VALUE', arg, {hint: usage});
+            values[arg.slice(2)] = value;
+        } else positionals.push(arg);
+    }
+    if (positionals.length !== positionalCount) emitError('BAD_ARGS', 'Incorrect positional arguments.', {hint: usage});
+    if (values['base-url']) process.env.SHAREONE_BASE_URL = values['base-url'];
+    return { values, positionals };
+}
 
 // Extract the trailing share ref (slug or 16-char share_id) from a full URL, a
 // `/s/<ref>` path, a raw-file `/file/<ref>` path, an API `/api/.../shares/<ref>`
@@ -638,6 +709,7 @@ module.exports = {
     isSudoworkMissingKeyError,
     listSudoworkSecrets,
     emitError,
+    parseScriptArgs,
     printShareOneScriptError,
     readLocalApiKey,
     requestBuffer,

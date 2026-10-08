@@ -6,6 +6,7 @@
 // 按 SharedPage 删除，与内容类型无关。
 
 const {
+    emitError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     extractShareRef,
@@ -30,27 +31,22 @@ for (let i = 0; i < args.length; i++) {
     } else if (!arg.startsWith('--') && !ref) {
         ref = arg;
     } else {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
-        usage();
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
     }
 }
 
 if (!ref) {
     usage();
-    process.exit(1);
+    emitError('BAD_ARGS', 'Required arguments are missing.');
 }
 
 (async () => {
     const credentialMode = await detectCredentialMode();
     if (credentialMode.mode === CREDENTIAL_MODE_SUDOWORK_PROXY && apiKey) {
-        console.error('ERROR:SUDOWORK_MANAGED_KEY');
-        console.error('Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。');
-        process.exit(1);
+        emitError('ERROR:SUDOWORK_MANAGED_KEY', ['Sudowork 模式下不要传 --api-key；请通过本 skill 的 save_api_key.js 或 create_guest_key.js 设置 ShareOne API Key。'].join('\n'));
     }
     if (credentialMode.mode !== CREDENTIAL_MODE_SUDOWORK_PROXY && !resolveDirectApiKey(apiKey)) {
-        console.error('ERROR:KEY_NOT_FOUND');
-        process.exit(1);
+        emitError('ERROR:KEY_NOT_FOUND');
     }
 
     const shareRef = encodeURIComponent(extractShareRef(ref));
