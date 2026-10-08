@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,7 +30,7 @@ metadata:
 Keep the body exactly as written.
 """
         (self.source / 'SKILL.md').write_text(self.content, encoding='utf-8')
-        for directory in ['agents', 'scripts', 'workflows']:
+        for directory in ['agents', 'scripts', 'workflows', 'templates']:
             (self.source / directory).mkdir()
             (self.source / directory / 'payload').write_text(directory)
         (self.source / '.shareone_credentials').write_text('must stay private')
@@ -44,14 +45,24 @@ Keep the body exactly as written.
         self.assertEqual(exported.split('---', 2)[2], self.content.split('---', 2)[2])
         self.assertEqual((self.source / 'SKILL.md').read_text(encoding='utf-8'), self.content)
         self.assertEqual({path.name for path in self.destination.iterdir()},
-                         {'SKILL.md', 'agents', 'scripts', 'workflows'})
-        for directory in ['agents', 'scripts', 'workflows']:
+                         {'SKILL.md', 'agents', 'scripts', 'workflows', 'templates'})
+        for directory in ['agents', 'scripts', 'workflows', 'templates']:
             self.assertEqual((self.destination / directory / 'payload').read_text(), directory)
 
     def test_wrong_release_tag_rejects_before_writing(self):
         with self.assertRaisesRegex(ValueError, 'Release tag'):
             prepare(self.source, self.destination, 'v1.4.0')
         self.assertFalse(self.destination.exists())
+
+    def test_real_release_includes_every_documented_template(self):
+        source = Path(__file__).resolve().parents[2]
+        text = (source / 'SKILL.md').read_text(encoding='utf-8')
+        fields = yaml.safe_load(text.split('---', 2)[1])
+        prepare(source, self.destination, f"v{fields['metadata']['version']}")
+        references = set(re.findall(r'templates/[a-z-]+\.html', text))
+        self.assertTrue(references)
+        for reference in references:
+            self.assertEqual((self.destination / reference).read_bytes(), (source / reference).read_bytes())
 
     def test_destination_cannot_modify_release_tree(self):
         with self.assertRaisesRegex(ValueError, 'outside the source'):

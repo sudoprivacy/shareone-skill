@@ -37,7 +37,7 @@ def prepare(source: Path, destination: Path, tag: str) -> dict:
         '---\n' + yaml.safe_dump(exported, allow_unicode=True, sort_keys=False) + '---\n' + match[2],
         encoding='utf-8',
     )
-    for directory in ['agents', 'scripts', 'workflows']:
+    for directory in ['agents', 'scripts', 'workflows', 'templates']:
         shutil.copytree(source / directory, destination / directory)
     return {'SKILL_SLUG': slug, 'SKILL_VERSION': version}
 
