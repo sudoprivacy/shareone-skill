@@ -4,5 +4,6 @@
 shareone_*_source.*
 shareone_*_download*
 node_modules/
+__pycache__/
 .DS_Store
 .shareone_vip.key
