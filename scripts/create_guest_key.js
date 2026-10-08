@@ -1,4 +1,6 @@
 const {
+    printShareOneScriptError,
+    emitError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
     isSudowork,
@@ -12,9 +14,7 @@ for (const arg of process.argv.slice(2)) {
     if (arg === '--no-save') {
         noSave = true;
     } else {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
-        console.error('Usage: node create_guest_key.js [--no-save]');
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${arg}`, ['Usage: node create_guest_key.js [--no-save]'].join('\n'));
     }
 }
 
@@ -26,8 +26,7 @@ async function createGuestKey() {
             authRequired: false,
         });
         if (!result.api_key) {
-            console.log("ERROR:INVALID_RESPONSE");
-            return;
+            emitError('INVALID_RESPONSE', 'The guest credential response contains no key.');
         }
 
         if (noSave) {
@@ -76,11 +75,7 @@ async function createGuestKey() {
             console.log("Sudowork Auth Proxy 当前不可用，已保存到 ShareOne 本地 fallback 凭证。");
         }
     } catch (error) {
-        if (error.statusCode === 429) {
-            console.log("ERROR:RATE_LIMIT_EXCEEDED");
-        } else {
-            console.log(`ERROR:${error.message}`);
-        }
+        process.exit(printShareOneScriptError(error));
     }
 }
 

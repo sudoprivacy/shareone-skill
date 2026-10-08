@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 const {
+    printShareOneScriptError,
+    emitError,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     deleteLocalApiKey,
     deleteSudoworkApiKey,
@@ -9,9 +11,7 @@ const {
 } = require('./shareone_client');
 
 if (process.argv.length > 2) {
-    console.error(`ERROR:UNKNOWN_ARGUMENT:${process.argv[2]}`);
-    console.error('Usage: node delete_api_key.js');
-    process.exit(1);
+    emitError(`ERROR:UNKNOWN_ARGUMENT:${process.argv[2]}`, ['Usage: node delete_api_key.js'].join('\n'));
 }
 
 async function deleteApiKey() {
@@ -38,6 +38,5 @@ async function deleteApiKey() {
 }
 
 deleteApiKey().catch((error) => {
-    console.error(`ERROR:${error.message}`);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });

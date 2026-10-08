@@ -1,16 +1,11 @@
 ---
 name: shareone
-slug: shareone
-displayName: ShareOne
-version: 1.4.4
-summary: Host HTML pages and share PDF/Word/PPT docs with short links
-tags: [shareone, publish, sharing, hosting, html, upload]
 description: Host HTML/Markdown pages and share PDF, Word, or PowerPoint docs as ShareOne short links. Use for publishing, passwords/watermarks, comments, downloads, updates, or Git-backed remote sources for ShareOne content.
 license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.4.4
+  version: 1.5.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -155,7 +150,7 @@ node /path/to/shareone-skill/scripts/ensure_credentials.js
 - 开启评论、而**可评论的东西不是 DOM 元素**时（canvas 图、地图、3D 视图、虚拟滚动大表格），用 `window.__SHAREONE__.anchors`：页面声明可评论的稳定身份及其当前位置。最小用法：`anchors.select({id, label}, rect)` 报告用户选择；`anchors.report([{id, state:"visible", rect} | {id, state:"hidden"} | {id, state:"missing"}])` 在布局变化时报告位置；`anchors.on("resync"|"reveal"|"hittest", fn)` 应答询问。仅在目标存在但当前视图没画时报告 `hidden`；页面无法定位该 id 时报告 `missing`。侧栏分别显示“当前视图隐藏”和“无法定位”，评论仍可阅读、回复；位置恢复后提示消失。文本定位失败或 `resync` 未应答不能推断内容已删除。锚点是一组稳定 id，坐标只用于当前显示，不落库。参考 `templates/canvas-comments.html` 实现点选、框选和视图恢复；完整接口与约束见后端 `agent.md` §14b。
 - 开启评论且页面会自己重绘（图表、流程图、看板、任何切换视图就重建 DOM 的页面）时，给每个可评论元素加一个稳定的 `data-*` id，例如 `<g class="node" data-node-id="委外cap">`。ShareOne 的区域评论以应用自己给的这个 id 作锚，重绘后评论自动跟回同一个元素；没有 id 时只能退回"第几个同名标签"的结构路径，重绘可能使它失效。id 在同一页内必须唯一（命中多个元素的 id 会被拒绝），且在重绘前后保持不变——用业务含义命名，别用渲染顺序生成。
 - 生成或修改启用评论的动态 HTML 时，按 [publish-text-page.md 的动态页面要求](workflows/publish-text-page.md#动态页面与文字评论) 保留可阅读文本与稳定身份。文字锚点不索引 SCRIPT/STYLE/NOSCRIPT/TEMPLATE 或标注浮层；大体积数据保留完整，可放在 head 的非执行数据脚本中。性能验收保留评论，实际展开、缩放和拖动；文本定位失败只表示锚点不可用，不代表评论或原文已删除。
-- 评论处理必须形成闭环：认领、修改源内容、同步原分享并验证，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。绑定 Git 源的页面修改仓库后刷新，具体见 `comments-process.md` 和 `git-backed-versions.md`。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于真正无关/无法处理的评论。
+- 评论处理必须形成闭环：认领、修改源内容、同步原分享并验证，然后用 `comment_reply.js --state`（`--state` 必填）**明确表态**——`resolved-agree`（同意收敛）/ `open-disagree`（有异议但保持 open）/ `open-need-input`（需人类澄清）。绑定 Git 源的页面修改仓库后刷新，具体见 `comments-process.md` 和 `git-backed-versions.md`。AI **永不**单方面 dismiss 一条分歧：不同意用 `open-disagree`，`dismiss` 仅用于 owner 确认的无关或垃圾评论；定位失败、权限不足或等待同步时用 `open-need-input`。
 
 ## 最终回复前检查清单
 

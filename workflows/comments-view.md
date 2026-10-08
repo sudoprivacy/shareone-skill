@@ -2,7 +2,7 @@
 
 当用户只是要求查看、拉取、总结评论时读取本文件。不要修改源文件，不要认领评论，不要关闭评论。
 
-查看评论走公开接口，**不需要 API Key**（`comment_list.js` 本身即公开读取；若改用 `shareone_api_request.js` 直连则加 `--public`）；只有进入处理评论流程（`comments-process.md`）时才需要凭据。
+开放分享允许匿名读取。完整列表、摘要、增量查询和截图均遵守密码、登录与评论开关；owner/协作者可用已有 API Key 跳过访问者门禁。`comment_list.js` 会使用已有凭据，也允许开放分享的匿名读取；不需要为查看评论新建身份。
 
 ## 1. 获取 ref
 
@@ -10,7 +10,7 @@
 
 ## 2. 查看评论
 
-优先用 `comment_list.js`——它输出干净的 UTF-8 JSON（`{ share, status, count, comments:[{ id, status, author_role, quote, content, created_at, resolution_note, reply_count, replies:[...] }] }`），省去手工拼接 endpoint 和解析原始响应，也规避控制台非 ASCII 乱码：
+优先用 `comment_list.js`——它输出干净的 UTF-8 JSON（`{ share, status, count, comments:[{ id, status, author_role, quote, content, created_at, updated_at, screenshot_url, agent_stance, viewer_can_manage, resolution_note, reply_count, replies:[...] }] }`），省去手工拼接 endpoint 和解析原始响应，也规避控制台非 ASCII 乱码：
 
 ```bash
 node scripts/comment_list.js <REF>                 # 默认 --status all
@@ -27,7 +27,9 @@ node scripts/comment_list.js <REF> --json compact  # 单行 JSON，便于管道�
 - `dismissed`
 - `unresolved`，等价于 `open + in_progress`
 
-查看评论无需凭据（公开接口）。只有进入处理评论流程（`comments-process.md`）时才需要 API Key。
+受限分享需要授权。密码门禁返回 `PASSWORD_REQUIRED`，登录门禁返回 `EMAIL_GATE_REQUIRED`；按 hint 完成访问授权，保持当前账号 Key。
+
+截图路径以 `/comment-screenshots/` 开头时，相对正在访问的 ShareOne origin 解析，发送同一 origin 的已验证 Cookie 或 owner/协作者凭据。
 
 ## 3. 评论理解规则
 
@@ -46,7 +48,7 @@ node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/summary" --p
 # -> { total, open, in_progress, resolved, dismissed, last_activity_at }
 ```
 
-返回 `open == 0` 时无需拉全量评论。
+返回 `open + in_progress == 0` 时没有待处理线程；需要阅读历史内容时仍可拉取列表。
 
 ## 5. 增量维护评论缓存
 
@@ -59,6 +61,6 @@ node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/changes?curs
 
 首次省略 `cursor`，用 `reset=true` 的 `comments` 替换缓存；包括上线前已有的评论。后续按顶层 ID 替换返回的完整线程（含回复），删除 `deleted_ids`，应用成功后保存 `next_cursor`。`has_more=true` 时立即继续；`limit` 是事件数，默认 100、最大 200。线程反映当前状态，同一批可幂等重放。400 表示游标无效，应重新获取快照。游标只对原分享有效。
 
-此接口每次检查页面密码/登录要求。`--public` 适用于没有访问门槛的分享；有 owner/协作者凭据时省略 `--public`。浏览器访问者使用页面授权 Cookie；本脚本不会代填页面密码。旧 `comment_list.js` 的单次查看方式不变。
+此接口每次检查页面密码/登录要求。`--public` 适用于没有访问门槛的分享；有 owner/协作者凭据时省略 `--public`。浏览器访问者使用页面授权 Cookie；本脚本不会代填页面密码。`comment_list.js` 保留截图、AI 立场、更新时间、权限字段和嵌套回复，只省略较大的 `highlighter_data`。
 
 该接口只读，不注册消费者或确认事件。需要可靠接收通知并唤醒 Agent 时，使用 `agent-notifications.md` 的持久消费者流程。

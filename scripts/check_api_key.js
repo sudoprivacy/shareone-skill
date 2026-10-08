@@ -1,4 +1,6 @@
 const {
+    printShareOneScriptError,
+    emitError,
     CREDENTIAL_MODE_DIRECT_FALLBACK,
     CREDENTIAL_MODE_SUDOWORK_PROXY,
     detectCredentialMode,
@@ -12,9 +14,7 @@ const {
 const args = process.argv.slice(2);
 for (const arg of args) {
     if (arg !== '--validate') {
-        console.error(`ERROR:UNKNOWN_ARGUMENT:${arg}`);
-        console.error('Usage: node check_api_key.js [--validate]');
-        process.exit(1);
+        emitError(`ERROR:UNKNOWN_ARGUMENT:${arg}`, ['Usage: node check_api_key.js [--validate]'].join('\n'));
     }
 }
 const validate = args.includes('--validate');
@@ -50,6 +50,5 @@ async function checkApiKey() {
 }
 
 checkApiKey().catch((error) => {
-    console.error(`ERROR:${error.message}`);
-    process.exit(1);
+    process.exit(printShareOneScriptError(error));
 });
