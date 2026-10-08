@@ -144,7 +144,7 @@ node scripts/publish.js "<NEW_HTML_FILE>" --filename "report.html" --share-id <Y
 
 **适用前提**：本章节只适用于目标内容本来就是 HTML 页面的场景——即用户提供的就是 HTML 文件，或用户明确要求美化/做成网页而新生成 HTML。**不要为了使用 Mermaid 而把 `.md`/`.txt` 文件转换成 HTML**；`.md` 里的图表内容按第 1 节的格式保持规则原文发布。
 
-当 HTML 页面需要包含图表、流程图、时序图、思维导图等可视化内容时，优先使用 Mermaid.js 而非 CSS/字符串拼接的伪图表。Mermaid 渲染的图表响应式更好、更生动。
+当 HTML 页面需要包含图表、流程图、时序图、思维导图等可视化内容时，优先使用 Mermaid.js：用文本维护节点与关系，渲染为可缩放的 SVG。复杂图表可结合原生 HTML/CSS/JavaScript 实现展开、缩放和拖动。
 
 ### 引入方式
 
@@ -158,8 +158,8 @@ pre.mermaid[data-processed] { visibility: visible; }
 
 ```html
 <script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({ startOnLoad: true, theme: 'default', look: 'handDrawn' });
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', theme: 'default' });
 </script>
 ```
 
@@ -191,9 +191,18 @@ flowchart LR
 ### 使用原则
 
 - 页面中有图表需求时，默认使用 Mermaid 替代 CSS 手工绘制的伪图表。
-- 一个页面可以包含多个 `<pre class="mermaid">` 块。
-- Mermaid 语法中不要包含 HTML 标签，保持纯文本描述。
+- 一个页面可以包含多个 `<pre class="mermaid">` 块；编辑已有页面时，在原文位置更新图表，保留其他正文与图表，并按第 6 节更新原分享。
+- 节点与连线标注优先用纯文本；需要分行时使用 Mermaid 支持的换行语法，避免在标签中嵌入交互 HTML。
 - 如果图表极其复杂且 Mermaid 表达力不够，可以退回到 SVG 或 Canvas 方案。
+
+复杂架构图的推荐实践（用户需要交互阅读时）：
+
+- **保留细节再优化布局。** 对照原图检查节点、部署/信任边界、连线方向和协议标注；两条连线即使连接同一对节点，也可能表示不同职责。全图缩小时用作导航，通过缩放阅读细节；不要为塞进窗口而删节点、合并关系或简写标注。
+- **在主文档中展开。** 将图嵌在正文原位置，用浮层扩大画布；建议提供“适应窗口”“100%”、缩放按钮、滚轮缩放、拖动及 Esc 关闭。大型分区图可加分区定位按钮，例如“云端”“盒子”。同一份图源供嵌入和展开视图使用，避免维护另一条内容重复的分享链接。
+- **按 SVG 原始尺寸缩放。** 读取渲染结果的 `viewBox`，将 SVG 宽高设为对应的 CSS 像素值，再用容器的 `translate/scale` 平移缩放；“100%”表示该原始尺寸，适应窗口另算比例。若 SVG 已被 `width:100%` 压缩，直接放大仍可能字号过小。画布裁切溢出，浮层随窗口变化重新适配；拖动手势和指针捕获按 `SKILL.md` 的评论交互约束处理。
+- **主题与图表一起更新。** 使用固定且验过的 Mermaid 版本；上述示例的 `default` 是静态主题。需要自定义明暗配色时用 `theme:'base'` 与 `themeVariables` 调整文字、连线、节点和分组背景（见 [Mermaid 主题文档](https://mermaid.js.org/config/theming.html)）。ShareOne HTML 页可监听外层的 `message`：`data.source === 'shareone-shell'`、`data.type === 'theme'`，读取 `data.value` 的 `light/dark`；直接打开时以系统主题作为初始值。
+- **重绘前保留源文本并恢复未缩放状态。** Mermaid 会将源文本替换为 SVG；手动重绘时设置 `startOnLoad:false`，切换主题时从保存的源码重绘，串行执行并清除旧 `data-processed`。调用 `mermaid.run({ nodes })` 前暂时移除画布的缩放变换，完成后重设 SVG 原始尺寸并恢复视图，避免标签测量受缩放影响而被裁切。其他会自行重建图表 DOM 的页面，也按动态页面要求保留稳定评论身份。
+- **看实际页面后再完成验收。** 用可用的真实浏览器工具（如 ai-dev-browser）打开发布后的主链接，查看截图；ShareOne 的 HTML 在 iframe 内，外层页面可打开不代表图已渲染。确认图表加载完成、正文完整、节点/边界/关系与标注无遗漏，实际操作展开/关闭、缩放、拖动、分区定位和窗口变化；在缩放后切换明暗主题，检查文字裁切、标签遮挡及对比度。开启评论的页面还需按上方动态页面要求验证评论交互。
 
 ## 8. 下一步
 
