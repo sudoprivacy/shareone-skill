@@ -135,10 +135,33 @@ node scripts/publish.js "<NEW_HTML_FILE>" --filename "report.html" --share-id <Y
 
 - 大体积数据快照保留完整，适合放在 `<head>` 的 `<script type="application/json">` 中，运行逻辑读取该数据。无需为了评论删记录、另建分享或关闭评论。普通发布保持文件格式和内容；只有用户授权修改页面时才调整结构。
 - 文字或 DOM 结构变化会重新定位，等长文字替换也算变化；代码更新、标注自身变化和纯坐标移动不应触发全量文字扫描。ShareOne 在一轮重定位中共用内存索引，不把索引或当前可见性写入评论。
-- DOM 目标用稳定 `data-*` 身份；canvas/虚拟视图按 `SKILL.md` 中的 `__SHAREONE__.anchors` 接口报告身份、状态和位置。
+- 普通 DOM 区域评论可用稳定元素属性。命名对象上的新文字评论若需跨呈现方式保持身份，在选中文字的容器上写 `data-shareone-anchor-id="<编译器/数据模型的稳定ID>"`，并按下方契约报告同一个 ID；不要用翻译后的显示名或 DOM 序号充当 ID。
 - 修改后保持评论开启，用真实浏览器实际展开/收起、滚轮缩放和拖动，检查评论卡片、恢复后的高亮及输入响应。CPU 采样累计值和一次交互墙钟时间分别报告，不把某台设备的结果写成性能承诺。
 
 旧文字锚点的偏移可能含非阅读内容，ShareOne 会校验引用文字并尝试内容重定位。失败时评论卡片仍保留，可阅读和回复；不要据此推断原文删除或自动关闭评论。
+
+#### 稳定对象的评论契约
+
+页面从加载开始可读取 `window.__SHAREONE__?.anchors`；独立文件中没有 SDK，调用前检查是否存在。
+
+```javascript
+const A = window.__SHAREONE__?.anchors;
+// 只在用户明确选择评论目标时调用；普通检查/浏览点击不调用。
+A?.select({id: object.id, label: object.label, context: object.context}, rectOf(object));
+A?.on("resync", ids => reportRequestedIds(ids));
+A?.on("reveal", ids => { revealKnownIds(ids); redraw(); });
+// 在自身布局、分页、语言和视图变化时报告，不另起指针帧轮询。
+A?.report([
+  {id: "source/Products", state: "visible", rect: rectOf(products)},
+  {id: "source/Products/ProductName", state: "hidden"}, // 已知存在，此视图未画
+  {id: "source/deleted-object", state: "missing"},     // 当前完整模型确认不存在
+  {id: "source/loading-object", state: "pending"},    // 尚未确认；清除旧坐标
+]);
+```
+
+`data-shareone-anchor-id` 只为**新选择**指定身份；该标记本身不提供位置、可见性或恢复操作，仍需上述回调和报告。整个选择位于一个标记容器中时，使用最近的共同标记容器的 ID，并保留引用文字与上下文；没有共同标记容器时保留普通文字语义。`select` 打开草稿，提交才落库；取消不创建评论。ID 可表示源对象或字段，不能从相同显示名猜测。
+
+旧文字评论不会自动转成对象评论；同名文字、未回答的 ID 和明确缺失分别处理。区域评论保存一组 ID，侧栏保留可见、隐藏、缺失和等待各部分的数量。恢复已知隐藏目标用“显示目标”；等待或文字未定位可“重新定位”。绑定公开 GitHub 文件时可查看该文件的 Git 历史；本地上传和内部 ShareOne 指针不新增版本库，不公开内部源地址。GitLab 和私有仓库认证仍需接入。
 
 ## 7. 使用 Mermaid.js 绘制图表
 
