@@ -18,9 +18,10 @@ let dataFile = null;
 let apiKey = null;
 let publicRequest = false;
 let idempotencyKey = null;
+let outputPath = null;
 
 function usage() {
-    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>' | --data-file <path|-> ] [--api-key <key>] [--public] [--idempotency-key <key>]");
+    console.error("Usage: node shareone_api_request.js <api_path> [--method GET|POST|PUT|DELETE] [--data '<json>' | --data-file <path|-> ] [--api-key <key>] [--public] [--idempotency-key <key>] [--output <path>]");
     console.error("  --data-file <path>  read the request body from a file ('-' for stdin); preferred for non-ASCII or nested-JSON bodies to avoid shell quoting issues.");
 }
 
@@ -50,6 +51,9 @@ for (let i = 0; i < args.length; i++) {
         i += 1;
     } else if (args[i] === '--public') {
         publicRequest = true;
+    } else if (args[i] === '--output') {
+        outputPath = nextValue(i, args[i]);
+        i += 1;
     } else if (!args[i].startsWith('--') && !apiPath) {
         apiPath = args[i];
     } else {
@@ -102,7 +106,12 @@ if (data !== null) {
         headers,
     }, body);
 })().then((res) => {
-    process.stdout.write(res.data);
+    if (outputPath !== null) {
+        fs.writeFileSync(outputPath, res.data);
+        process.stdout.write(JSON.stringify({ saved_to: outputPath, bytes: res.data.length }) + '\n');
+    } else {
+        process.stdout.write(res.data);
+    }
 }).catch((error) => {
     process.exit(printShareOneScriptError(error));
 });

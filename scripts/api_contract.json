@@ -168,6 +168,18 @@
       "hint": "Edit at remote_url and refresh the original share. Unbind only when explicitly replacing the source.",
       "retryable": false
     },
+    "CONTENT_REVIEW_REQUIRED": {
+      "status": 409,
+      "category": "permission",
+      "hint": "Submit the remote candidate to /api/v1/pages/{ref}/content-reviews and wait for a root reviewer decision. Keep the existing share unchanged.",
+      "retryable": false
+    },
+    "CONTENT_REVIEW_DENIED": {
+      "status": 403,
+      "category": "permission",
+      "hint": "The reviewer denied this exact content and distribution scope. Read the review decision; do not retry publication.",
+      "retryable": false
+    },
     "CUSTOM_SLUG_TAKEN": {
       "status": 409,
       "category": "conflict",
