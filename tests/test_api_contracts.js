@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-async function fixture(t, handler) {
+async function fixture(t, handler, {anonymous = false} = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shareone-contract-'));
     const requests = [];
     const server = http.createServer(async (req, res) => {
@@ -20,10 +20,13 @@ async function fixture(t, handler) {
         await new Promise(resolve => server.close(resolve));
         fs.rmSync(dir, {recursive: true, force: true});
     });
-    const env = {...process.env, SHAREONE_API_KEY: 'isolated-owner-key', SHAREONE_BASE_URL: `http://127.0.0.1:${server.address().port}`};
+    const sourceScripts = path.join(__dirname, '../scripts');
+    const scriptsDir = anonymous ? path.join(dir, 'scripts') : sourceScripts;
+    if (anonymous) fs.cpSync(sourceScripts, scriptsDir, {recursive: true});
+    const env = {...process.env, SHAREONE_API_KEY: anonymous ? '' : 'isolated-owner-key', SHAREONE_BASE_URL: `http://127.0.0.1:${server.address().port}`};
     for (const name of Object.keys(env)) if (name.startsWith('SUDOWORK_') || /^(http|https|all)_proxy$/i.test(name)) delete env[name];
     const run = (script, args = []) => new Promise(resolve => {
-        const child = spawn(process.execPath, [path.join(__dirname, '../scripts', script + '.js'), ...args], {cwd: dir, env, windowsHide: true});
+        const child = spawn(process.execPath, [path.join(scriptsDir, script + '.js'), ...args], {cwd: dir, env, windowsHide: true});
         let stdout = '', stderr = '';
         child.stdout.on('data', data => stdout += data);
         child.stderr.on('data', data => stderr += data);
@@ -112,13 +115,67 @@ test('comment triage retains screenshots, stance and deep replies', async t => {
     assert.equal(error(invalid).error_code, 'BAD_STATUS');
 });
 
-test('agent publication explicitly defaults comments off; PUT preserves omitted settings', async t => {
+test('local and remote publication default comments off and honor explicit settings', async t => {
     const f = await fixture(t, (_, res) => json(res, {share_id: 'review', share_url: 'http://example.test/s/review'}, 201));
-    for (const [args, expected] of [[[], false], [['--allow-comments', 'true'], true], [['--share-id', 'review'], undefined]]) {
-        const result = await f.run('upload_page', ['--remote-url', 'https://example.test/review.html', ...args]);
-        assert.equal(result.status, 0, result.stderr);
-        assert.equal(JSON.parse(f.requests.at(-1).body).allow_comments, expected);
+    for (const channel of ['local', 'remote']) {
+        for (const value of [undefined, true, false]) {
+            const file = path.join(f.dir, `${channel}-${value}.html`);
+            fs.writeFileSync(file, '<p>Review</p>');
+            const args = channel === 'local' ? [file] : ['--remote-url', 'https://example.test/review.html'];
+            if (value !== undefined) args.push('--allow-comments', String(value));
+            const result = await f.run(channel === 'local' ? 'publish' : 'upload_page', args);
+            assert.equal(result.status, 0, result.stderr);
+            const request = f.requests.at(-1);
+            assert.equal(request.method, 'POST');
+            assert.equal(JSON.parse(request.body).allow_comments, value ?? false);
+        }
     }
+});
+
+test('local and remote updates omit unspecified comment settings', async t => {
+    const content = '<p>Updated review</p>';
+    const f = await fixture(t, (request, res) => {
+        if (request.method === 'GET') {
+            assert.equal(request.path, '/api/v1/shares/review/download');
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(content);
+        } else {
+            json(res, {share_id: 'review', share_url: 'http://example.test/s/review'});
+        }
+    });
+    const file = path.join(f.dir, 'review.html');
+    fs.writeFileSync(file, content);
+    for (const channel of ['local', 'remote']) {
+        for (const value of [undefined, true, false]) {
+            const args = channel === 'local' ? [file] : ['--remote-url', 'https://example.test/review.html'];
+            args.push('--share-id', 'review');
+            if (value !== undefined) args.push('--allow-comments', String(value));
+            const result = await f.run(channel === 'local' ? 'publish' : 'upload_page', args);
+            assert.equal(result.status, 0, result.stderr);
+            const request = f.requests.filter(r => r.method === 'PUT').at(-1);
+            const body = JSON.parse(request.body);
+            assert.equal(body.allow_comments, value);
+            assert.equal(Object.hasOwn(body, 'allow_comments'), value !== undefined);
+        }
+    }
+});
+
+test('anonymous comment reads preserve COMMENTS_DISABLED without credential advice', async t => {
+    const response = {error_code: 'COMMENTS_DISABLED', detail: 'Comments are disabled for this page',
+        hint: 'The owner must enable comments before this action is available.', retryable: false};
+    const f = await fixture(t, (request, res) => {
+        assert.equal(request.headers['x-api-key'], undefined);
+        json(res, response, 403);
+    }, {anonymous: true});
+    const result = await f.run('comment_list', ['review']);
+    assert.equal(result.status, 6, result.stderr);
+    const actual = error(result);
+    assert.equal(actual.error_code, 'COMMENTS_DISABLED');
+    assert.equal(actual.category, 'permission');
+    assert.equal(actual.retryable, false);
+    assert.equal(actual.detail, response.detail);
+    assert.equal(actual.hint, response.hint);
+    assert.doesNotMatch(result.stderr, /AUTH_FAILED|INVALID_API_KEY|create_guest/);
 });
 
 test('keyed binary publication stays one replayable creation operation', async t => {

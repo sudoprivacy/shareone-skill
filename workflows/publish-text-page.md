@@ -41,6 +41,8 @@
 
 ## 5. 首次创建 (POST)
 
+本地文件与远程 URL 创建均默认关闭评论，脚本在 POST 中显式发送 `allow_comments: false`。只有用户明确要求评论或协同时，才传 `--allow-comments true`。
+
 ### 5a. 从本地文件创建
 
 执行：
@@ -68,7 +70,6 @@ node scripts/upload_page.js --remote-url "https://github.com/org/repo/blob/main/
 - `--filename` 可选：未提供时服务端从 URL 路径自动提取。
 - 创建时服务端必须成功 fetch 远程内容，失败返回 400。
 - 远程内容与本地上传内容一样经过 AI 审核。
-- 默认不开启评论。
 - 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
 
 ### ShareOne 内链 pointer 模式（多份定制分享）
@@ -105,6 +106,7 @@ node scripts/publish.js "<YOUR_FILE_PATH>" --filename "YOUR_FILE_NAME" --share-i
 规则：
 
 - Sudowork 环境不要传 `--api-key`。
+- 未传 `--allow-comments` 时保留原评论开关；创建的默认值不应用到 PUT 更新。
 - 如果用户要求关闭评论协同或开启评论协同，可以在 PUT 更新时传入 `--allow-comments false` 或 `--allow-comments true`。
 - 如果用户要求页面持久化数据（游戏分数、表单状态等），传入 `--allow-data true`。
 - 如果用户要求修改或清除密码/水印，可以传入 `--password` 或 `--watermark`。

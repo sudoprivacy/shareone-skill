@@ -27,6 +27,8 @@ node scripts/comment_list.js <REF> --json compact  # 单行 JSON，便于管道�
 - `dismissed`
 - `unresolved`，等价于 `open + in_progress`
 
+评论已关闭时返回 `ERROR:COMMENTS_DISABLED`（403），表示该分享不提供评论读取，不能据此判断 API Key 无效。告知用户评论已关闭；只有用户明确要求开启时，才按 [update-share-settings.md](update-share-settings.md) 修改开关。
+
 受限分享需要授权。密码门禁返回 `PASSWORD_REQUIRED`，登录门禁返回 `EMAIL_GATE_REQUIRED`；按 hint 完成访问授权，保持当前账号 Key。
 
 截图路径以 `/comment-screenshots/` 开头时，相对正在访问的 ShareOne origin 解析，发送同一 origin 的已验证 Cookie 或 owner/协作者凭据。

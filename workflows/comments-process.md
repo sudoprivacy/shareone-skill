@@ -105,13 +105,13 @@ node scripts/comment_reply.js "<REF>" <COMMENT_ID> --content "已按你的建议
 | `open-disagree` | 不同意（在 `--content` 里写清理由） | **保持 `open`**，标记“AI 有异议”，把是否关闭交回给提出者 |
 | `open-need-input` | 需要人类进一步澄清/输入 | 保持 `open` |
 
-脚本会自动从父评论继承 `quote`/`highlighter_data`、以 `author_role=agent` 发一条回复（输出 `REPLY_POSTED:<id>` 和 `COMMENT_STATE:<state>`），后端据 `--state` 原子地设置父评论状态与 AI 立场。不要手工拼接含 `highlighter_data` 的 JSON。
+后端会从父评论继承 `quote`/`highlighter_data`，以 `author_role=agent` 保存回复，并据 `--state` 原子地设置父评论状态与 AI 立场。脚本 stdout 返回回复 JSON，核对 `id`、`parent_status` 和 `parent_agent_stance`；不要手工拼接含 `highlighter_data` 的 JSON。
 
 **关键原则：AI 永不单方面关闭一条分歧。** 不同意时用 `open-disagree`（保持 open、让提出者决定），**绝不**用 dismiss 把别人的评论关掉——关闭/重开一条评论的权力属于提出评论的人（以及页面 owner）。
 
 - 输出 `ERROR:STATE_REQUIRED` / `ERROR:INVALID_STATE`：必须补上合法的 `--state`。
 - 输出 `ERROR:IS_REPLY:<parent_id>`：传入的是回复 ID，改用父评论 ID 重试。
-- 输出 `ERROR:AUTH_FAILED`（403）：先查该链接评论是否被关闭（`allow_comments=false`），可经 `update-share-settings.md` 重新开启后重试。
+- 输出 `ERROR:COMMENTS_DISABLED`（403）：评论已关闭，停止评论处理并告知用户。只有用户明确要求开启时，才按 [update-share-settings.md](update-share-settings.md) 修改开关。
 
 如果误发了一条回复，可以删除（仅作者本人、且父评论仍为 `open` 时可删，会级联删除其回复）：
 
