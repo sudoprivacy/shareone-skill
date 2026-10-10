@@ -41,7 +41,7 @@ node scripts/ensure_credentials.js --create-guest
 - `MODE:sudowork`：后续所有命令**不要传 `--api-key`**，凭证由 Auth Proxy 自动注入。
 - `MODE:sudowork_fallback` / `MODE:direct`：脚本会自动读取环境变量 `SHAREONE_API_KEY` 或本地凭证文件，**无需显式传 `--api-key`**；仅当用户临时指定其他 key 时才传。
 - 所有非 Sudowork secrets 的本地凭据都只读写 ShareOne skill 安装目录下的 `.shareone_credentials`，不读写用户 home。
-- 如果后续操作中服务返回 401（脚本输出 `ERROR:AUTH_FAILED`），提示用户“API Key 无效或权限不足”。
+- 后续操作按 `ERROR_JSON.error_code` 和 `hint` 判断原因。`INVALID_API_KEY` 才表示账号凭据无效，应核对当前账号的 Key；`PASSWORD_REQUIRED` / `EMAIL_GATE_REQUIRED` 是分享访问门禁，`COMMENTS_DISABLED` 是评论开关已关闭，均保留当前账号 Key。不要为这些访问限制创建新身份或自动开启评论。
 
 ## 4. 错误处理
 
