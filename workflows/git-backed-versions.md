@@ -14,6 +14,8 @@
 
 这些 remote-url 步骤适用于文本页面；PDF/PPT/Word 继续使用 `publish-binary-file.md`。只查看历史时读取源仓库即可；需要创建、绑定、切换或刷新分享时，先完成 `environment-and-credentials.md` 的凭据检查。更新 remote URL 和强制刷新要求分享 owner 权限；仓库读写权限由 Git 平台单独管理。
 
+完整原生 HTML 的远程源上限为 16 MiB。遇到审核拒绝或 `CONTENT_REVIEW_REQUIRED`，保留拒绝记录，按用户授权走 [content-review.md](content-review.md)；不另选版本或改成其他上传方式绕过拒绝。正式批准仅适用于审核记录中的文件哈希、源 URL、页面和访问设置。
+
 ## 2. 选择跟随分支或固定 commit
 
 以下 `org/repo`、文件路径、`<FULL_COMMIT_SHA>` 和 `<REF>` 都要替换成实际值。命令从 skill 安装目录执行；创建新分享还需遵守 `publish-text-page.md` 的发布规则。

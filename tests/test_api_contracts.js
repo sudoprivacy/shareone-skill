@@ -53,6 +53,7 @@ test('API errors steer by domain code and preserve detail and Retry-After', asyn
         [401, 'INVALID_API_KEY', 7, false], [403, 'AGENT_OWNER_REQUIRED', 6, false],
         [400, 'BAD_REQUEST', 2, false], [404, 'NOT_FOUND', 4, false], [422, 'VALIDATION_ERROR', 2, false],
         [409, 'IDEMPOTENCY_CONFLICT', 5, false], [409, 'CONSUMER_LEASE_BUSY', 5, true], [429, 'RATE_LIMIT_EXCEEDED', 8, true],
+        [409, 'CONTENT_REVIEW_REQUIRED', 6, false], [403, 'CONTENT_REVIEW_DENIED', 6, false],
     ]) {
         const detail = status === 422 ? [{loc: ['body', 'state'], type: 'missing'}] : {code, message: 'Decision detail'};
         response = {status, body: {error_code: code, detail, retryable}, headers: {'Retry-After': '2'}};
@@ -65,6 +66,21 @@ test('API errors steer by domain code and preserve detail and Retry-After', asyn
         assert.equal(parsed.retry_after, '2');
         assert.doesNotMatch(parsed.hint, /create_guest/);
     }
+});
+
+test('API response output preserves exact bytes without shell redirection', async t => {
+    const body = Buffer.concat([Buffer.from('<p>你好</p>\r\n'), Buffer.from([0, 255])]);
+    const f = await fixture(t, (req, res) => {
+        assert.equal(req.method, 'GET');
+        assert.equal(req.headers['x-api-key'], 'isolated-owner-key');
+        res.writeHead(200, {'Content-Type': 'application/octet-stream'});
+        res.end(body);
+    });
+    const file = path.join(f.dir, 'review-content.html');
+    const result = await f.run('shareone_api_request', ['/api/v1/content-reviews/review/content', '--output', file]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(fs.readFileSync(file), body);
+    assert.deepEqual(JSON.parse(result.stdout), {saved_to:file, bytes:body.length});
 });
 
 test('ambiguous POST failures require supported replay protection', async t => {
