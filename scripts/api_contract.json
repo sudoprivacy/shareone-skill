@@ -171,7 +171,7 @@
     "CONTENT_REVIEW_REQUIRED": {
       "status": 409,
       "category": "permission",
-      "hint": "Submit the remote candidate to /api/v1/pages/{ref}/content-reviews and wait for a root reviewer decision. Keep the existing share unchanged.",
+      "hint": "Submit the remote candidate to /api/v1/pages/{ref}/content-reviews. Wait on the same review ID for automatic_pending; only manual_required needs a root reviewer. Keep the existing share unchanged until approved.",
       "retryable": false
     },
     "CONTENT_REVIEW_DENIED": {

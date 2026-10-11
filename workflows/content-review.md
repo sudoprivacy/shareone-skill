@@ -20,7 +20,9 @@
 ```json
 {
   "remote_url": "https://github.com/org/repo/blob/<FULL_COMMIT_SHA>/native.html",
-  "note": "复核依据、原拒绝理由和已有证据的位置"
+  "note": "复核依据、原拒绝理由和已有证据的位置",
+  "source_agent": "项目名 / Agent 会话标识",
+  "automatic_review": true
 }
 ```
 
@@ -31,6 +33,7 @@
 ```bash
 node scripts/shareone_api_request.js /api/v1/pages/<REF>/content-reviews --method POST --data-file review-request.json
 node scripts/shareone_api_request.js /api/v1/content-reviews/<REVIEW_ID>
+node scripts/wait_content_review.js <REVIEW_ID> --timeout-seconds 600
 node scripts/shareone_api_request.js /api/v1/content-reviews/<REVIEW_ID>/content --output reviewed-native.html
 ```
 
@@ -40,7 +43,32 @@ node scripts/shareone_api_request.js /api/v1/content-reviews/<REVIEW_ID>/content
 候选源必须可公开读取；带密码或登录门禁的 ShareOne 内链不支持作为复核源，不能
 用候选内容下载接口获取受门禁保护的源内容。
 
-## 管理员作出决定
+## 默认后台自动复核
+
+新申请默认后台复核，无需逐次请当前对话的 AI 批准。服务器重新获取完整文件并核对
+SHA-256，分段检查完整内容后进行整体检查；明确安全才自动批准。固定 GitHub 版本中
+未变化的 JSON 数据可以引用同一分享、来源和执行上下文的既有完整批准，所有变化和
+应用代码仍需检查。源代码或页面上下文变化时不沿用这部分证据。
+
+以服务器最新记录为准，不依据本地交接文档判断是否仍待批。`source_agent` 是提交方
+标注，方便管理员知道来自哪个项目或会话；权限依据仍是认证账号。响应包含
+`owner_name`、`source_agent`、`decision_source` 和审核证据。
+
+| `status` | Agent 下一步 |
+|---|---|
+| `automatic_pending` | 等待同一个 ID；不重复提交，不重试发布 |
+| `approved` 且 `approved: true` | 按下节用原所有者更新原链接 |
+| `manual_required` | 保持原分享不变，交给 Root Admin 内容复核队列 |
+| `rejected` | 保留拒绝记录，停止发布 |
+
+`wait_content_review.js` 仅查询审核：通过时输出记录并以 0 退出；人工或拒绝时输出
+结构化错误并以 6 退出；等待超时输出 `wait_timed_out: true` 和当前记录，以 3 退出。
+超时后后台申请继续处理，下次查询同一 ID。服务故障、无法确认安全或来源变化时进入
+人工队列。旧申请保留原处理方式，最终决定不会被自动覆盖。
+
+仅需人工时可在新申请设置 `automatic_review: false`。自动复核不会发布页面。
+
+## 管理员处理人工队列
 
 有 root 权限的审核员可在 `https://shareone.vip/root-admin` 的「内容复核」页下载
 候选文件、核对内容与访问设置，并记录批准或拒绝的依据。也可在用户明确授权该
