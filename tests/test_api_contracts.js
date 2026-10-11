@@ -76,13 +76,26 @@ test('review wait stops on manual review and final denial', async t => {
 
 test('review wait timeout returns pending record, and invalid input makes no request', async t => {
     const f = await fixture(t, (_, res) => json(res, {id:'test-review', approved:null, status:'automatic_pending'}));
-    const result = await f.run('wait_content_review', ['test-review', '--timeout-seconds', '0.1', '--poll-seconds', '0.01']);
+    const result = await f.run('wait_content_review', ['test-review', '--timeout-seconds', '0.3', '--poll-seconds', '0.01']);
     assert.equal(result.status, 3, result.stderr);
     assert.equal(JSON.parse(result.stdout).wait_timed_out, true);
     const before = f.requests.length;
     const invalid = await f.run('wait_content_review', ['test-review', '--timeout-seconds', 'NaN']);
     assert.equal(invalid.status, 2);
     assert.equal(f.requests.length, before);
+});
+
+test('review wait returns known pending state when its final GET consumes the remaining budget', async t => {
+    let calls = 0;
+    const f = await fixture(t, (_, res) => {
+        if (++calls === 1) json(res, {id:'test-review', approved:null, status:'automatic_pending'});
+        // The second read stays open until the client cancels it at its deadline.
+    });
+    const result = await f.run('wait_content_review', ['test-review', '--timeout-seconds', '1', '--poll-seconds', '0.01']);
+    assert.equal(result.status, 3, result.stderr);
+    assert.equal(JSON.parse(result.stdout).wait_timed_out, true);
+    assert.equal(JSON.parse(result.stdout).approved, null);
+    assert.equal(calls, 2);
 });
 
 test('API errors steer by domain code and preserve detail and Retry-After', async t => {
