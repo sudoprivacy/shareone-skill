@@ -45,6 +45,46 @@ function error(result) {
     return JSON.parse(line.slice('ERROR_JSON:'.length));
 }
 
+test('review wait reads one request to approval without publishing', async t => {
+    let count = 0;
+    const f = await fixture(t, (req, res) => {
+        assert.equal(req.method, 'GET');
+        assert.equal(req.path, '/api/v1/content-reviews/test-review');
+        assert.equal(req.headers['x-api-key'], 'isolated-owner-key');
+        const approved = ++count === 3;
+        json(res, {id:'test-review', approved: approved ? true : null, status: approved ? 'approved' : 'automatic_pending', decision_source: approved ? 'automatic' : null});
+    });
+    const result = await f.run('wait_content_review', ['test-review', '--poll-seconds', '0.01']);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).approved, true);
+    assert.equal(count, 3);
+});
+
+test('review wait stops on manual review and final denial', async t => {
+    let response;
+    const f = await fixture(t, (_, res) => json(res, response));
+    for (const [approved, status, code] of [[null, 'manual_required', 'CONTENT_REVIEW_REQUIRED'], [false, 'rejected', 'CONTENT_REVIEW_DENIED']]) {
+        response = {id:'test-review', approved, status, source_agent:'test-agent'};
+        const before = f.requests.length;
+        const result = await f.run('wait_content_review', ['test-review']);
+        assert.equal(result.status, 6, result.stderr);
+        assert.equal(error(result).error_code, code);
+        assert.equal(error(result).detail.source_agent, 'test-agent');
+        assert.equal(f.requests.length, before + 1);
+    }
+});
+
+test('review wait timeout returns pending record, and invalid input makes no request', async t => {
+    const f = await fixture(t, (_, res) => json(res, {id:'test-review', approved:null, status:'automatic_pending'}));
+    const result = await f.run('wait_content_review', ['test-review', '--timeout-seconds', '0.1', '--poll-seconds', '0.01']);
+    assert.equal(result.status, 3, result.stderr);
+    assert.equal(JSON.parse(result.stdout).wait_timed_out, true);
+    const before = f.requests.length;
+    const invalid = await f.run('wait_content_review', ['test-review', '--timeout-seconds', 'NaN']);
+    assert.equal(invalid.status, 2);
+    assert.equal(f.requests.length, before);
+});
+
 test('API errors steer by domain code and preserve detail and Retry-After', async t => {
     let response;
     const f = await fixture(t, (_, res) => json(res, response.body, response.status, response.headers));
