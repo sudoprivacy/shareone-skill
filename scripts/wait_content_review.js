@@ -26,8 +26,18 @@ if (!/^[A-Za-z0-9-]{1,100}$/.test(positionals[0])) emitError('BAD_ARGS', 'Invali
             timedOut();
             return;
         }
-        const review = await requestShareOneJson(`/api/v1/content-reviews/${encodeURIComponent(positionals[0])}`,
-            {apiKey: values['api-key'], timeoutMs: Math.min(30000, Math.max(1, deadline - performance.now()))});
+        const remainingAtRequest = deadline - performance.now();
+        let review;
+        try {
+            review = await requestShareOneJson(`/api/v1/content-reviews/${encodeURIComponent(positionals[0])}`,
+                {apiKey: values['api-key'], timeoutMs: Math.min(30000, Math.max(1, remainingAtRequest))});
+        } catch (error) {
+            if (!lastReview || error.code !== 'ETIMEDOUT' || remainingAtRequest > 30000) throw error;
+            const remaining = deadline - performance.now();
+            if (remaining > 0) await sleep(remaining);
+            timedOut();
+            return;
+        }
         if (review.approved === true) {
             console.log(JSON.stringify(review));
             return;
