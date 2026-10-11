@@ -16,7 +16,16 @@ if (!/^[A-Za-z0-9-]{1,100}$/.test(positionals[0])) emitError('BAD_ARGS', 'Invali
 
 (async () => {
     const deadline = performance.now() + budget;
+    let lastReview;
+    function timedOut() {
+        console.log(JSON.stringify({...lastReview, wait_timed_out: true}));
+        process.exitCode = 3;
+    }
     while (true) {
+        if (lastReview && performance.now() >= deadline) {
+            timedOut();
+            return;
+        }
         const review = await requestShareOneJson(`/api/v1/content-reviews/${encodeURIComponent(positionals[0])}`,
             {apiKey: values['api-key'], timeoutMs: Math.min(30000, Math.max(1, deadline - performance.now()))});
         if (review.approved === true) {
@@ -28,10 +37,10 @@ if (!/^[A-Za-z0-9-]{1,100}$/.test(positionals[0])) emitError('BAD_ARGS', 'Invali
         if (review.status !== 'automatic_pending') emitError('CONTENT_REVIEW_REQUIRED',
             review.automatic_review_evidence?.reason || review.moderation_reason || 'Administrator review is required.',
             {detail: review, hint: 'Keep the share unchanged. Root reviewers can inspect this record in /root-admin; do not retry publication.'});
+        lastReview = review;
         const remaining = deadline - performance.now();
         if (remaining <= 0) {
-            console.log(JSON.stringify({...review, wait_timed_out: true}));
-            process.exitCode = 3;
+            timedOut();
             return;
         }
         await sleep(Math.min(interval, remaining));
