@@ -5,7 +5,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.8.1
+  version: 1.9.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone

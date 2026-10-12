@@ -74,6 +74,15 @@ test('review wait stops on manual review and final denial', async t => {
     }
 });
 
+test('changed review candidate steers the owner to resubmit current facts without administrator approval', async t => {
+    const f = await fixture(t, (_, res) => json(res, {id:'test-review', approved:null, status:'resubmission_required'}));
+    const result = await f.run('wait_content_review', ['test-review']);
+    assert.equal(result.status, 6);
+    assert.match(error(result).hint, /current source bytes and access scope/);
+    assert.doesNotMatch(error(result).hint, /Root|administrator/);
+    assert.equal(f.requests.length, 1);
+});
+
 test('review wait timeout returns pending record, and invalid input makes no request', async t => {
     const f = await fixture(t, (_, res) => json(res, {id:'test-review', approved:null, status:'automatic_pending'}));
     const result = await f.run('wait_content_review', ['test-review', '--timeout-seconds', '0.3', '--poll-seconds', '0.01']);
