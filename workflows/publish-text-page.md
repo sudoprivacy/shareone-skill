@@ -6,6 +6,14 @@
 
 不适用文件类型：`.ppt`、`.pptx`、`.pdf`、`.doc`、`.docx`。遇到这些文件时，停止本 workflow，改读 `publish-binary-file.md`（那里的命令同样是 `publish.js`，但规则不同）。即使误判了类型，`publish.js` 也会自动把支持的二进制文档分发到正确的上传通道，不会发错接口。
 
+## 视口应用的来源页脚
+
+编写或修改占满 iframe 视口的 HTML 应用时，在源 HTML 的 `body` 上声明 `data-shareone-layout="viewport"`。绑定外部 `remote_url` 后，ShareOne 的来源链接使用约 23px 的单行紧凑页脚；长 URL 省略显示，链接和悬停提示仍保留完整 URL。应用主体应随剩余高度收缩，例如纵向 flex 容器内的 `flex:1; min-height:0`，不要把主体另设成完整 `100vh` 再叠加页脚。
+
+普通文章保留文档间距；`data-shareone-layout="document"` 可显式指定。未声明时仅自动识别固定视口高度、纵向 flex、垂直 overflow 为 hidden/clip 的现有 `body`。窗口缩放和评论侧栏开关改变 iframe 视口时会重新判断。内部 ShareOne 指针不显示来源页脚。此声明只控制页脚展示，不改持久内容或 iframe 高度；不要仅为添加声明重写用户已有文件，仍按下方原格式规则发布。
+
+验收 HTML 应用时检查桌面、手机、评论侧栏开/关和窗口缩放：来源链接可见且可点击，应用主体使用剩余高度，页脚不额外产生横向或空白滚动区。Git 源修改仍按 [git-backed-versions.md](git-backed-versions.md) 更新并同步原分享。
+
 ## 1. 识别目标内容与格式保持规则
 
 格式保持是硬规则，优先于一切“展示更美观”的考虑：
