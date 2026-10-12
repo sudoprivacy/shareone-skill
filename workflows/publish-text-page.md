@@ -165,6 +165,33 @@ A?.report([
 
 `data-shareone-anchor-id` 只为**新选择**指定身份；该标记本身不提供位置、可见性或恢复操作，仍需上述回调和报告。整个选择位于一个标记容器中时，使用最近的共同标记容器的 ID，并保留引用文字与上下文；没有共同标记容器时保留普通文字语义。`select` 打开草稿，提交才落库；取消不创建评论。ID 可表示源对象或字段，不能从相同显示名猜测。
 
+对象内文字选择还保存 `text: {exact, prefix, suffix, position: {start,end}, version?}`。
+偏移是该对象**可阅读文字**的 UTF-16 偏移，排除代码、样式与标注浮层；原文及上下文
+是选择时的事实，不能由今天的对象标题重建。DOM 容器可写
+`data-shareone-anchor-version="en@content-revision"`，由 ShareOne 捕获；内容或语言变化
+时必须更新它。版本未知时，只允许原文和两侧上下文唯一命中，重复句子不能猜。
+
+页面接入文字恢复，无需在每次手势中下载评论：
+
+```javascript
+A?.on("reveal-text", async ({commentId, id, text, signal}) => {
+  await revealAndRenderObject(id);
+  if (signal.aborted) return "unresolved"; // 旧异步请求不再绘制标记
+  const content = readableTextOf(id); // 与捕获使用同一份文字序列
+  const span = A.resolveText(content, text, contentLanguageVersionOf(id));
+  if (!span) { clearPassageMark(commentId); return "unresolved"; }
+  markPassageWithoutInterceptingInput(id, span, commentId);
+  return "resolved";
+});
+// 版本或语言切换时失效旧定位；这是浏览器状态，不落库。
+A?.reportText([{commentId, state: "pending"}]);
+```
+
+`reveal` 仍接收稳定 ID 数组；`reveal-text` 接收原始文字 selector，可异步恢复并返回
+`resolved` 或 `unresolved`。对象可见和文字已定位是独立证据。页面未接入回调时明确
+显示尚未支持文字恢复；旧对象评论显示未捕获文字范围，不把 label 当 selector。
+页面自绘标记保持不拦截输入；平移、缩放和位置报告不触发文字扫描或网络请求。
+
 旧文字评论不会自动转成对象评论；同名文字、未回答的 ID 和明确缺失分别处理。区域评论保存一组 ID，侧栏保留可见、隐藏、缺失和等待各部分的数量。恢复已知隐藏目标用“显示目标”；等待或文字未定位可“重新定位”。绑定公开 GitHub 文件时可查看该文件的 Git 历史；本地上传和内部 ShareOne 指针不新增版本库，不公开内部源地址。GitLab 和私有仓库认证仍需接入。
 
 ## 7. 使用 Mermaid.js 绘制图表

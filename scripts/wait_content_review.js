@@ -46,7 +46,9 @@ if (!/^[A-Za-z0-9-]{1,100}$/.test(positionals[0])) emitError('BAD_ARGS', 'Invali
         if (review.approved !== null) emitError('INVALID_RESPONSE', 'Review response has no authoritative decision.');
         if (review.status !== 'automatic_pending') emitError('CONTENT_REVIEW_REQUIRED',
             review.automatic_review_evidence?.reason || review.moderation_reason || 'Administrator review is required.',
-            {detail: review, hint: 'Keep the share unchanged. Root reviewers can inspect this record in /root-admin; do not retry publication.'});
+            {detail: review, hint: review.status === 'resubmission_required'
+                ? 'Keep the share unchanged. Submit the current source bytes and access scope as a new review; this obsolete candidate cannot approve the changed publication.'
+                : 'Keep the share unchanged. Root reviewers can inspect this record in /root-admin; do not retry publication.'});
         lastReview = review;
         const remaining = deadline - performance.now();
         if (remaining <= 0) {
