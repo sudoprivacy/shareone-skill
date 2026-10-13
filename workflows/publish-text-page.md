@@ -179,7 +179,47 @@ A?.report([
 `data-shareone-anchor-version="en@content-revision"`，由 ShareOne 捕获；内容或语言变化
 时必须更新它。版本未知时，只允许原文和两侧上下文唯一命中，重复句子不能猜。
 
-页面接入文字恢复，无需在每次手势中下载评论：
+页面接入常驻文字恢复，无需在每次手势中下载评论。对象可见并不代表该对象上的
+选中文字已定位；实现下面的被动回调，用户提交后即可恢复当前可见文字：
+
+```javascript
+A?.configure({marks: "page"});
+A?.on("resync-text", async passages => {
+  // 每批是当前所有单对象文字评论；移除不再存在的旧 Range。
+  retainPassageMarks(new Set(passages.map(p => p.commentId)));
+  return Promise.all(passages.filter(p => p.changed).map(async p => {
+    clearPassageMark(p.commentId);
+    if (!p.visible || !readableSurfaceIsVisible(p.id))
+      return {commentId: p.commentId, state: "pending"};
+    const span = A.resolveText(readableTextOf(p.id), p.text, contentLanguageVersionOf(p.id));
+    if (p.signal.aborted) return {commentId: p.commentId, state: "pending"};
+    if (!span) return {commentId: p.commentId, state: "unresolved"};
+    // 页面自身的可阅读表面；使用 Range/CSS.highlights，不覆盖输入区域。
+    const mark = markPassageWithoutInterceptingInput(p.id, span, p.commentId);
+    p.signal.addEventListener("abort", () => clearThisPassageMark(p.commentId, mark), {once: true});
+    return {commentId: p.commentId, state: "resolved"};
+  }));
+});
+A?.on("marks", ({text, point}) => {
+  setNativePassageMarksVisible(text);
+  setObjectMarksVisible(point);
+});
+// 自绘某一条文字批注被点击时，精确打开该线程。activate(objectId) 仍用于对象。
+A?.activateComment(commentId);
+// 文字表面挂载、内容/语言切换后合并调用一次；平移、缩放不调用。
+A?.resyncText();
+```
+
+此示例中的读取、绘制和清理函数由页面实现，必须与捕获使用同一份可阅读文字序列。
+`resync-text` 收到 `{commentId, id, text, visible, changed, signal?}` 数组；`changed: false`
+的条目只用于保留缓存，不重复扫描，只有变化条目带取消信号。回调返回
+`{commentId, state}` 数组，状态为 `pending`、`resolved`、`unresolved` 或 `unsupported`。
+被动恢复不打开面板、不切视图、不导航或移动相机。隐藏表面保持 `pending`；已显示但
+版本不符或匹配有歧义才报 `unresolved`。十秒超时或回调失败会取消本批变化条目，
+新选择、重新绑定、删除和下一次恢复也会取消旧请求；取消时只清除该请求自己的 Range。
+可见性、Range、索引、取消信号和标记开关都只存在于浏览器内存。
+
+独立的显式“显示目标”操作允许导航并恢复：
 
 ```javascript
 A?.on("reveal-text", async ({commentId, id, text, signal}) => {
@@ -195,9 +235,10 @@ A?.on("reveal-text", async ({commentId, id, text, signal}) => {
 A?.reportText([{commentId, state: "pending"}]);
 ```
 
-`reveal` 仍接收稳定 ID 数组；`reveal-text` 接收原始文字 selector，可异步恢复并返回
-`resolved` 或 `unresolved`。对象可见和文字已定位是独立证据。页面未接入回调时明确
-显示尚未支持文字恢复；旧对象评论显示未捕获文字范围，不把 label 当 selector。
+`reveal` 仍接收稳定 ID 数组；`reveal-text` 接收原始文字 selector 和取消信号，可异步恢复并返回
+`pending`、`resolved`、`unresolved` 或 `unsupported`。只实现 `reveal-text` 的页面仍需
+读者显式定位才恢复；缺少该回调时显式定位报告尚未支持。旧对象评论显示未捕获文字范围，
+不把 label 当 selector。重新绑定目标是可选的修改操作，不表示刚提交的评论失去目标。
 页面自绘标记保持不拦截输入；平移、缩放和位置报告不触发文字扫描或网络请求。
 
 旧文字评论不会自动转成对象评论；同名文字、未回答的 ID 和明确缺失分别处理。区域评论保存一组 ID，侧栏保留可见、隐藏、缺失和等待各部分的数量。恢复已知隐藏目标用“显示目标”；等待或文字未定位可“重新定位”。绑定公开 GitHub 文件时可查看该文件的 Git 历史；本地上传和内部 ShareOne 指针不新增版本库，不公开内部源地址。GitLab 和私有仓库认证仍需接入。
