@@ -5,7 +5,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.9.1
+  version: 1.10.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -25,6 +25,8 @@ Host HTML/Markdown pages and share PDF, Word, and PowerPoint documents with Shar
 ## 内容版本管理决策
 
 ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分支、评审和回退在源仓库完成，ShareOne 负责展示、分享、访问控制和评论协作。`remote_url` 的 snapshot 是当前缓存，ShareOne 不维护独立的文件版本库。
+
+评论目标重新绑定是独立的协作记录，不是文件版本管理。原始 `quote` / `highlighter_data` 保留；有 `anchor_binding` 时，其目标才是当前有效绑定。查看或处理评论先读对应评论工作流；用户明确要求重绑时再读 [workflows/comment-reattachment.md](workflows/comment-reattachment.md)。不要猜测未记录的历史选区，也不要自动迁移旧评论。
 
 远程文本源支持完整 UTF-8 原生 HTML，下载上限为 **16 MiB（16,777,216 字节）**。审核返回 `CONTENT_REVIEW_REQUIRED` 或实际内容拒绝时，保留原链接和拒绝记录，并读取 [workflows/content-review.md](workflows/content-review.md)。用户已授权发布或更新时，可为同一候选申请正式复核，无需重复询问是否申请。新申请默认后台自动复核，用 `wait_content_review.js` 等待同一 ID；自动批准后由原所有者更新原链接，仅 `manual_required` 需要管理员。不要用压缩包装、改 MIME、密码门禁、另建分享或其他上传入口重试被拒绝的公开发布。
 

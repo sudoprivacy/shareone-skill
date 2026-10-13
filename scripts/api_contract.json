@@ -132,6 +132,18 @@
       "hint": "Ask the share owner to repair this comment's parent references.",
       "retryable": false
     },
+    "ANCHOR_BINDING_CONFLICT": {
+      "status": 409,
+      "category": "conflict",
+      "hint": "Read the current thread and binding history, then explicitly confirm a new proposal. Do not retry automatically.",
+      "retryable": false
+    },
+    "ANCHOR_OBJECT_CHANGE_REQUIRED": {
+      "status": 409,
+      "category": "validation",
+      "hint": "Show the old and new object identities and confirm allow_object_change before reattaching.",
+      "retryable": false
+    },
     "INVALID_COMMENT_CURSOR": {
       "status": 400,
       "category": "validation",

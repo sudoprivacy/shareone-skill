@@ -55,6 +55,8 @@ node scripts/download_share.js "<REF>" --task-anchor
 
 ### 步骤 3：精准应用修改
 
+定位前检查父线程的 `anchor_binding`：有绑定时使用其 `quote` / `highlighter_data`，否则使用父评论原始字段。完整捕获可通过通用脚本读取评论列表；`comment_list.js` 保留当前绑定，但省略原始较大的 `highlighter_data`。原始字段用于历史证据，不能覆盖当前绑定。找不到当前目标时保持反馈状态并澄清；用户明确要求重新绑定才读 [comment-reattachment.md](comment-reattachment.md)。
+
 - 综合理解整个 thread（父评论 + 所有 replies）的最终意图，必要时先和用户确认。
 - 绝对不要用全局 `replace()` 或正则批量替换，会误伤其他同名文案。
 - 基于 DOM 结构精确定位：利用 `highlighter_data.startMeta.parentTagName`、`parentIndex`、`textOffset`，结合 `quote`（被选中原文）定位准确节点。

@@ -177,6 +177,7 @@ test('agent reply uses one POST and outputs observed parent state', async t => {
 
 test('comment triage retains screenshots, stance and deep replies', async t => {
     const comment = {id: 'root', highlighter_data: 'bulky', screenshot_url: '/comment-screenshots/review/root.png',
+        viewer_can_reattach: true, anchor_binding: {revision: 2, quote: 'Current target', highlighter_data: '{"anchor_type":"app_declared"}', actor_id: 'author', reason: 'Explicit selection'},
         agent_stance: 'need-input', updated_at: '2026-10-08T00:00:00Z', viewer_can_manage: true,
         replies: [{id: 'reply', highlighter_data: '{}', parent_status: 'open', agent_stance: 'disagree', replies: [{id: 'nested', replies: []}]}]};
     const f = await fixture(t, (req, res) => {assert.equal(req.headers['x-api-key'], 'isolated-owner-key'); json(res, [comment]);});
@@ -186,6 +187,8 @@ test('comment triage retains screenshots, stance and deep replies', async t => {
     assert.equal(actual.screenshot_url, comment.screenshot_url);
     assert.equal(actual.agent_stance, comment.agent_stance);
     assert.equal(actual.updated_at, comment.updated_at);
+    assert.deepEqual(actual.anchor_binding, comment.anchor_binding);
+    assert.equal(actual.viewer_can_reattach, true);
     assert.equal(actual.replies[0].replies[0].id, 'nested');
     assert.ok(!('highlighter_data' in actual));
     const invalid = await f.run('comment_list', ['review', '--status', 'unresovled']);
