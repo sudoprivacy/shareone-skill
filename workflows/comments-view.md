@@ -40,6 +40,8 @@ node scripts/comment_list.js <REF> --json compact  # 单行 JSON，便于管道�
 - 评论数据中可能包含 `replies`。必须将父评论及其所有回复作为一个 thread 整体阅读，综合理解最终共识。
 - 不要把每条回复当成独立修改指令。
 - 所有回复继承父评论的锚点，也就是 `highlighter_data` 和 `quote`。
+- 父评论的 `quote` / `highlighter_data` 是原始捕获，有 `anchor_binding` 时使用其中的目标作为当前绑定。`comment_list.js` 会保留完整的 `anchor_binding`、绑定版本及 `viewer_can_reattach`，不会把当前绑定伪装为原始选区。回复属于同一线程，按父线程的当前绑定阅读。
+- 原始 SDK 对象评论可以没有文字范围。不能从对象标题、评论时间或 Git 分支猜出原始选中文字。用户明确要求重新选择目标时，读取 [comment-reattachment.md](comment-reattachment.md)；普通查看不触发重绑。
 
 ## 4. 轻量摘要
 
