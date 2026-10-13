@@ -5,7 +5,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.10.1
+  version: 1.10.2
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -28,7 +28,7 @@ ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分�
 
 评论目标重新绑定是独立的协作记录，不是文件版本管理。原始 `quote` / `highlighter_data` 保留；有 `anchor_binding` 时，其目标才是当前有效绑定。查看或处理评论先读对应评论工作流；用户明确要求重绑时再读 [workflows/comment-reattachment.md](workflows/comment-reattachment.md)。不要猜测未记录的历史选区，也不要自动迁移旧评论。
 
-远程文本源支持完整 UTF-8 原生 HTML，下载上限为 **16 MiB（16,777,216 字节）**。审核返回 `CONTENT_REVIEW_REQUIRED` 或实际内容拒绝时，保留原链接和拒绝记录，并读取 [workflows/content-review.md](workflows/content-review.md)。用户已授权发布或更新时，可为同一候选申请正式复核，无需重复询问是否申请。新申请默认后台自动复核，用 `wait_content_review.js` 等待同一 ID；自动批准后由原所有者更新原链接，仅 `manual_required` 需要管理员。不要用压缩包装、改 MIME、密码门禁、另建分享或其他上传入口重试被拒绝的公开发布。
+远程文本源支持完整 UTF-8 原生 HTML，下载上限为 **16 MiB（16,777,216 字节）**。发布前 AI 审核当前默认暂停，普通新内容沿原发布接口完成；是否启用以服务端为准。已有复核记录和最终决定继续有效。实际返回 `CONTENT_REVIEW_REQUIRED` 或内容拒绝时，保留原链接和记录，并读取 [workflows/content-review.md](workflows/content-review.md)。不要为解除已有候选的阻断改内容包装、MIME、门禁、身份或上传入口。
 
 涉及 ShareOne 内容的 Git 源、版本选择、历史或回退时，先读 [workflows/git-backed-versions.md](workflows/git-backed-versions.md)，再按下方路由执行发布、刷新或评论处理。该工作流包含跟随分支、固定 commit、切换版本与验收命令。**当前可直接使用公开 GitHub 文本文件；GitLab 和私有仓库认证仍需接入，不能把产品方向当作已支持能力。** 普通本地文件上传仍按原流程执行，不自行迁移到 Git。
 

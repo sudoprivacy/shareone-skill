@@ -77,9 +77,9 @@ node scripts/upload_page.js --remote-url "https://github.com/org/repo/blob/main/
 - 支持的域名：GitHub（blob URL 自动转 raw）和 **ShareOne 内链**（如 `https://s.shareone.vip/s/my-source-page`）。其他域名返回 400。
 - `--filename` 可选：未提供时服务端从 URL 路径自动提取。
 - 创建时服务端必须成功 fetch 远程内容，失败返回 400。
-- 远程内容与本地上传内容一样经过 AI 审核。
+- 新内容是否执行 AI 审核由服务端统一配置；当前默认暂停，普通发布接口保持可用。
 - 远程源必须是 UTF-8 文本，最大 16 MiB；大小按字节计算。原生 HTML 可直接托管，包含完整数据的文件不需要删记录或包装成自行重写 document 的解码页。
-- 自动审核覆盖完整准备后的输入，超过审核预算或审核服务未完成时返回 `CONTENT_REVIEW_REQUIRED`；原分享保持不变。按 [content-review.md](content-review.md) 走用户授权的正式复核流程，不能把 HTTP 成功或提交复核当成已发布。
+- 已有审核阻断仍有效。实际返回 `CONTENT_REVIEW_REQUIRED` 时保持原分享不变，按 [content-review.md](content-review.md) 处理同一记录；`CONTENT_REVIEW_DISABLED` 表示新自动复核申请暂停。发布后核对原链接与完整下载字节，不能把提交复核当成已发布。
 - 服务端根据文件名自动生成 slug，无需手动设置。只有当用户明确要求自定义短链接时，才加 `--slug` 覆盖。
 
 ### ShareOne 内链 pointer 模式（多份定制分享）
