@@ -221,6 +221,8 @@ pre.mermaid[data-processed] { visibility: visible; }
 ```html
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.0/dist/mermaid-layout-elk.esm.min.mjs';
+  mermaid.registerLayoutLoaders(elkLayouts);
   mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', theme: 'default' });
 </script>
 ```
@@ -231,6 +233,10 @@ pre.mermaid[data-processed] { visibility: visible; }
 
 ```html
 <pre class="mermaid">
+---
+config:
+  layout: elk
+---
 flowchart LR
     A[开始] --> B{条件判断}
     B -->|是| C[执行]
@@ -253,6 +259,7 @@ flowchart LR
 ### 使用原则
 
 - 页面中有图表需求时，默认使用 Mermaid 替代 CSS 手工绘制的伪图表。
+- **架构图和流程图默认选择 ELK layered。** 用每张图的 Mermaid YAML 前置配置 `config.layout: elk`；需要 Dagre 时明确写 `layout: dagre`。沿用 Mermaid 的配置语法，不新增 ShareOne 注释协议。上述固定 Mermaid 11 示例必须注册配套 ELK 加载器；浏览器使用包含依赖的 `esm.min.mjs`，`core.mjs` 面向打包器，直接引入会出现裸模块解析错误。自带渲染器的 HTML 页面在自身注册；托管 Markdown 依赖站点渲染器是否支持该布局，不能只改 skill 就宣称已支持。
 - 一个页面可以包含多个 `<pre class="mermaid">` 块；编辑已有页面时，在原文位置更新图表，保留其他正文与图表，并按第 6 节更新原分享。
 - 节点与连线标注优先用纯文本；需要分行时使用 Mermaid 支持的换行语法，避免在标签中嵌入交互 HTML。
 - 如果图表极其复杂且 Mermaid 表达力不够，可以退回到 SVG 或 Canvas 方案。
@@ -260,6 +267,7 @@ flowchart LR
 复杂架构图的推荐实践（用户需要交互阅读时）：
 
 - **保留细节再优化布局。** 对照原图检查节点、部署/信任边界、连线方向和协议标注；两条连线即使连接同一对节点，也可能表示不同职责。全图缩小时用作导航，通过缩放阅读细节；不要为塞进窗口而删节点、合并关系或简写标注。
+- **按实际几何比较布局。** ELK layered 适合有方向、分组和层级的图，但不能保证零交叉。比较原布局与 ELK 的文字重叠、连线穿节点、边界和适应窗口比例，再选择方向与间距；平移和缩放不应重跑布局。sudograph 的另一种布局是 Cytoscape 的 fCoSE，适合关系图比较，不能把它当成 Mermaid 的内置布局名。
 - **在主文档中展开。** 将图嵌在正文原位置，用浮层扩大画布；建议提供“适应窗口”“100%”、缩放按钮、滚轮缩放、拖动及 Esc 关闭。大型分区图可加分区定位按钮，例如“云端”“盒子”。同一份图源供嵌入和展开视图使用，避免维护另一条内容重复的分享链接。
 - **按 SVG 原始尺寸缩放。** 读取渲染结果的 `viewBox`，将 SVG 宽高设为对应的 CSS 像素值，再用容器的 `translate/scale` 平移缩放；“100%”表示该原始尺寸，适应窗口另算比例。若 SVG 已被 `width:100%` 压缩，直接放大仍可能字号过小。画布裁切溢出，浮层随窗口变化重新适配；拖动手势和指针捕获按 `SKILL.md` 的评论交互约束处理。
 - **主题与图表一起更新。** 使用固定且验过的 Mermaid 版本；上述示例的 `default` 是静态主题。需要自定义明暗配色时用 `theme:'base'` 与 `themeVariables` 调整文字、连线、节点和分组背景（见 [Mermaid 主题文档](https://mermaid.js.org/config/theming.html)）。ShareOne HTML 页可监听外层的 `message`：`data.source === 'shareone-shell'`、`data.type === 'theme'`，读取 `data.value` 的 `light/dark`；直接打开时以系统主题作为初始值。
