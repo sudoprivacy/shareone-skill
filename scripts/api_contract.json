@@ -192,6 +192,12 @@
       "hint": "The reviewer denied this exact content and distribution scope. Read the review decision; do not retry publication.",
       "retryable": false
     },
+    "CONTENT_REVIEW_DISABLED": {
+      "status": 409,
+      "category": "conflict",
+      "hint": "Automatic content review is paused. Publish new content through the ordinary pages endpoint; keep existing review holds and decisions unchanged.",
+      "retryable": false
+    },
     "CUSTOM_SLUG_TAKEN": {
       "status": 409,
       "category": "conflict",
