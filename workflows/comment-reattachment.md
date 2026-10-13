@@ -49,7 +49,7 @@ Agent 仅能提交用户已明确选择并确认的当前目标。不得把 LLM 
 ```
 
 ```bash
-node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/<ROOT_ID>/anchor-bindings" --method POST --json-file binding.json
+node scripts/shareone_api_request.js "/api/v1/shares/<REF>/comments/<ROOT_ID>/anchor-bindings" --method POST --data-file binding.json
 ```
 
 `expected_revision` 必须是已读的当前版本；文字偏移是 UTF-16 单元，不是 Unicode 字符或字节。`text` 只可对应一个稳定对象；未提供内容版本时明确说明，不能伪造版本。整个对象选择省略 `text`。坐标、可见性和定位进度不属于请求字段。
