@@ -182,7 +182,7 @@
     },
     "REMOTE_SOURCE_ACCESS_DENIED": {
       "status": 403,
-      "category": "source_access",
+      "category": "permission",
       "hint": "Restore the registered repository credential or project access. Keep the ShareOne identity and accepted cache unchanged.",
       "retryable": false
     },

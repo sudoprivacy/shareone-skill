@@ -54,6 +54,7 @@ test('refresh reports fetch failure and contention without claiming completion',
         assert.notEqual(reply.status,0);
         assert.equal(JSON.parse(reply.stdout).remote_fetch_status,state);
         assert.match(reply.stderr,new RegExp('ERROR:'+code));
+        if (code === 'REMOTE_SOURCE_ACCESS_DENIED') assert.equal(reply.status,6);
         assert.doesNotMatch(reply.stderr,/SHARE_REFRESHED:/);
     }
     result = {share_id:'stable-share',remote_fetch_status:'not_modified',remote_last_error:null};
