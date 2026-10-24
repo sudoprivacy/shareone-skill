@@ -45,6 +45,35 @@ function error(result) {
     return JSON.parse(line.slice('ERROR_JSON:'.length));
 }
 
+test('refresh reports fetch failure and contention without claiming completion', async t => {
+    let result;
+    const f = await fixture(t, (_, res) => json(res, result));
+    for (const [state,code] of [['error','REMOTE_SOURCE_ACCESS_DENIED'],['busy','REMOTE_SOURCE_BUSY']]) {
+        result = {share_id:'stable-share',remote_fetch_status:state,remote_error_code:code,remote_last_error:null};
+        const reply = await f.run('refresh_share',['stable-share']);
+        assert.notEqual(reply.status,0);
+        assert.equal(JSON.parse(reply.stdout).remote_fetch_status,state);
+        assert.match(reply.stderr,new RegExp('ERROR:'+code));
+        assert.doesNotMatch(reply.stderr,/SHARE_REFRESHED:/);
+    }
+    result = {share_id:'stable-share',remote_fetch_status:'not_modified',remote_last_error:null};
+    const reply = await f.run('refresh_share',['stable-share']);
+    assert.equal(reply.status,0,reply.stderr);
+    assert.match(reply.stderr,/SHARE_REFRESHED:stable-share/);
+    assert.equal(f.requests.length,3);
+});
+
+test('GitLab upload transmits only the source and explicit viewer scope', async t => {
+    const f = await fixture(t, (_, res) => json(res,{share_id:'stable-share'}));
+    const source = 'https://gitlab.com/team/review/-/raw/'+'a'.repeat(40)+'/dist/review.html';
+    const reply = await f.run('upload_page',['--remote-url',source,'--viewer-scope','owner_and_collaborators']);
+    assert.equal(reply.status,0,reply.stderr);
+    assert.deepEqual(JSON.parse(f.requests[0].body),{remote_url:source,viewer_scope:'owner_and_collaborators',allow_comments:false});
+    const bad = await f.run('upload_page',['--remote-url',source,'--viewer-scope','anyone']);
+    assert.notEqual(bad.status,0);
+    assert.equal(f.requests.length,1);
+});
+
 test('review wait reads one request to approval without publishing', async t => {
     let count = 0;
     const f = await fixture(t, (req, res) => {

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.11.1
+  version: 1.12.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -30,7 +30,7 @@ ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分�
 
 远程文本源支持完整 UTF-8 原生 HTML，下载上限为 **16 MiB（16,777,216 字节）**。发布前 AI 审核当前默认暂停，普通新内容沿原发布接口完成；是否启用以服务端为准。已有复核记录和最终决定继续有效。实际返回 `CONTENT_REVIEW_REQUIRED` 或内容拒绝时，保留原链接和记录，并读取 [workflows/content-review.md](workflows/content-review.md)。不要为解除已有候选的阻断改内容包装、MIME、门禁、身份或上传入口。
 
-涉及 ShareOne 内容的 Git 源、版本选择、历史或回退时，先读 [workflows/git-backed-versions.md](workflows/git-backed-versions.md)，再按下方路由执行发布、刷新或评论处理。该工作流包含跟随分支、固定 commit、切换版本与验收命令。**当前可直接使用公开 GitHub 文本文件；GitLab 和私有仓库认证仍需接入，不能把产品方向当作已支持能力。** 普通本地文件上传仍按原流程执行，不自行迁移到 Git。
+涉及 ShareOne 内容的 Git 源、版本选择、历史或回退时，先读 [workflows/git-backed-versions.md](workflows/git-backed-versions.md)，再按下方路由执行发布、刷新或评论处理。公开 GitHub 可跟随分支；GitLab 只接受固定完整 commit 的文本产物，私库需运营方注册项目、文件、发布者与服务端只读凭据，企业内网还需实际网络接通。私库分享默认仅所有者和协作者可读。普通本地文件上传仍按原流程执行，不自行迁移到 Git。
 
 ## 脚本执行基准
 
