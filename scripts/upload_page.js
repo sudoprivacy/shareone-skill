@@ -22,11 +22,12 @@ let allowComments = null;
 let allowData = null;
 let slug = null;
 let remoteUrl = null;
+let viewerScope = null;
 let forceNew = false;
 let idempotencyKey = null;
 
 function usage() {
-    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--allow-data <true|false>] [--force-new] [--idempotency-key <key>]");
+    console.error("Usage: node upload_page.js <file_path> [--remote-url <url>] [--viewer-scope <link|owner_and_collaborators>] [--api-key <key>] [--base-url <url>] [--filename <name>] [--password <pwd>] [--watermark <wm>] [--share-id <id>] [--slug <slug>] [--allow-comments <true|false>] [--allow-data <true|false>] [--force-new] [--idempotency-key <key>]");
 }
 
 function nextValue(index, flag) {
@@ -73,6 +74,10 @@ for (let i = 0; i < args.length; i++) {
         i += 1;
     } else if (args[i] === '--remote-url') {
         remoteUrl = nextValue(i, args[i]);
+        i += 1;
+    } else if (args[i] === '--viewer-scope') {
+        viewerScope = nextValue(i, args[i]);
+        if (!['link', 'owner_and_collaborators'].includes(viewerScope)) emitError('BAD_ARGS', 'Invalid --viewer-scope.');
         i += 1;
     } else if (args[i] === '--idempotency-key') {
         idempotencyKey = nextValue(i, args[i]);
@@ -159,6 +164,7 @@ async function uploadPage() {
     }
 
     if (password !== null) payload.password = password;
+    if (viewerScope !== null) payload.viewer_scope = viewerScope;
     if (watermark !== null) payload.watermark = watermark;
     if (slug !== null) payload.custom_slug = slug;
 

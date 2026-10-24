@@ -57,6 +57,10 @@ if (!ref) {
         apiKey,
     });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    if (result.remote_fetch_status === 'error' || result.remote_fetch_status === 'busy' || result.remote_last_error) {
+        emitError(result.remote_error_code || (result.remote_fetch_status === 'busy' ? 'REMOTE_SOURCE_BUSY' : 'REMOTE_SOURCE_UNAVAILABLE'),
+            result.remote_last_error || 'The source was not refreshed; the accepted cache remains unchanged.');
+    }
     console.error(`SHARE_REFRESHED:${extractShareRef(ref)}`);
 })().catch((error) => {
     process.exit(printShareOneScriptError(error));
