@@ -34,6 +34,8 @@ ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分�
 
 ## 脚本执行基准
 
+主要调用脚本支持 `--help`，无需凭据或联网即可查看参数、使用范围和返回状态。分享链接只标识资源；自建或本地部署用 `SHAREONE_BASE_URL` 或脚本支持的 `--base-url` 显式配置，链接不能覆盖 API origin。HTTP 错误保留服务端错误码；GitLab 源凭据错误按源修复，不更换 ShareOne 身份。发布结果须包含真实分享 ID/URL，或明确的待复核记录；`INVALID_RESPONSE` 表示结果未确认，只能按同一操作的幂等契约重放。
+
 本文档中所有 `node scripts/xxx.js` 命令的路径都以 **本 skill 的安装目录**（即本 `SKILL.md` 所在目录）为基准。当前工作目录通常是用户的项目目录，直接执行相对路径会失败。执行前先确定 skill 目录，使用绝对路径或先 `cd` 到 skill 目录，例如：
 
 ```bash

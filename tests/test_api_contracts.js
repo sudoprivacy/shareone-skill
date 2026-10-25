@@ -1,49 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('node:http');
-const { spawn } = require('node:child_process');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
-
-async function fixture(t, handler, {anonymous = false} = {}) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shareone-contract-'));
-    const requests = [];
-    const server = http.createServer(async (req, res) => {
-        let body = '';
-        for await (const chunk of req) body += chunk;
-        requests.push({method: req.method, path: req.url, headers: req.headers, body});
-        await handler(requests.at(-1), res);
-    });
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-    t.after(async () => {
-        await new Promise(resolve => server.close(resolve));
-        fs.rmSync(dir, {recursive: true, force: true});
-    });
-    const sourceScripts = path.join(__dirname, '../scripts');
-    const scriptsDir = anonymous ? path.join(dir, 'scripts') : sourceScripts;
-    if (anonymous) fs.cpSync(sourceScripts, scriptsDir, {recursive: true});
-    const env = {...process.env, SHAREONE_API_KEY: anonymous ? '' : 'isolated-owner-key', SHAREONE_BASE_URL: `http://127.0.0.1:${server.address().port}`};
-    for (const name of Object.keys(env)) if (name.startsWith('SUDOWORK_') || /^(http|https|all)_proxy$/i.test(name)) delete env[name];
-    const run = (script, args = []) => new Promise(resolve => {
-        const child = spawn(process.execPath, [path.join(scriptsDir, script + '.js'), ...args], {cwd: dir, env, windowsHide: true});
-        let stdout = '', stderr = '';
-        child.stdout.on('data', data => stdout += data);
-        child.stderr.on('data', data => stderr += data);
-        child.on('close', status => resolve({status, stdout, stderr}));
-    });
-    return {run, requests, dir};
-}
-function json(res, value, status = 200, headers = {}) {
-    res.writeHead(status, {'Content-Type': 'application/json', ...headers});
-    res.end(JSON.stringify(value));
-}
-function error(result) {
-    assert.equal(result.stdout, '');
-    const line = result.stderr.split('\n').find(line => line.startsWith('ERROR_JSON:'));
-    assert.ok(line, result.stderr);
-    return JSON.parse(line.slice('ERROR_JSON:'.length));
-}
+const {fixture, json, error} = require('./http_fixture');
 
 test('refresh reports fetch failure and contention without claiming completion', async t => {
     let result;
@@ -65,7 +24,7 @@ test('refresh reports fetch failure and contention without claiming completion',
 });
 
 test('GitLab upload transmits only the source and explicit viewer scope', async t => {
-    const f = await fixture(t, (_, res) => json(res,{share_id:'stable-share'}));
+    const f = await fixture(t, (_, res) => json(res,{share_id:'stable-share',share_url:'https://shareone.vip/s/stable-share'}));
     const source = 'https://gitlab.com/team/review/-/raw/'+'a'.repeat(40)+'/dist/review.html';
     const reply = await f.run('upload_page',['--remote-url',source,'--viewer-scope','owner_and_collaborators']);
     assert.equal(reply.status,0,reply.stderr);
@@ -195,7 +154,7 @@ test('agent reply uses one POST and outputs observed parent state', async t => {
         assert.equal(req.headers['idempotency-key'], 'event-123.reply');
         json(res, observed, 201);
     });
-    const result = await f.run('comment_reply', ['http://example.test/s/review', 'root', '--content', 'Reviewed', '--state', 'resolved-agree', '--idempotency-key', 'event-123.reply']);
+    const result = await f.run('comment_reply', ['https://s.shareone.vip/s/review', 'root', '--content', 'Reviewed', '--state', 'resolved-agree', '--idempotency-key', 'event-123.reply']);
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(JSON.parse(result.stdout), observed);
     assert.equal(f.requests.length, 1);

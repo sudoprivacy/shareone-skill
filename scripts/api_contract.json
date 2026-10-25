@@ -269,6 +269,15 @@
     "resolved",
     "dismissed"
   ],
+  "viewer_scopes": [
+    "link",
+    "owner_and_collaborators"
+  ],
+  "publication_pending_statuses": [
+    "automatic_pending",
+    "manual_required",
+    "rejected"
+  ],
   "idempotency_operations": [
     {
       "method": "POST",

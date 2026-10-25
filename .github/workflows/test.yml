@@ -39,7 +39,7 @@ jobs:
         run: node test/redirect_follow.test.js
 
       - name: Agent API steering and safe replay
-        run: node --test tests/test_api_contracts.js
+        run: node --test tests/test_api_contracts.js tests/test_steering.js
 
       - name: Card templates carry a decodable, correctly-sized QR
         run: node tests/test_business_card_template.js
