@@ -164,6 +164,9 @@ test('command help and malformed arguments are handled without authentication, n
         const missing=await f.run(script,['--api-key','--help']);
         assert.equal(missing.status,2);
         assert.equal(error(missing).error_code,'MISSING_VALUE');
+        const empty=await f.run(script,[''],proxy);
+        assert.equal(empty.status,2,empty.stderr);
+        assert.equal(error(empty).error_code,'BAD_ARGS');
     }
     const scope=await f.run('upload_page',['--remote-url',SOURCE,'--viewer-scope','unknown']);
     assert.equal(scope.status,2);

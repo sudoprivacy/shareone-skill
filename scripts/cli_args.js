@@ -46,7 +46,7 @@ function commandLine({summary, result, positional, optional = false, options}) {
         } else if (arg.startsWith('-')) emitError('UNKNOWN_ARGUMENT', arg, {hint: usage});
         else positionals.push(arg);
     }
-    if (positionals.length > 1 || (!optional && positionals.length !== 1)) emitError('BAD_ARGS', 'Incorrect positional arguments.', {hint: usage});
+    if (positionals.includes('') || positionals.length > 1 || (!optional && positionals.length !== 1)) emitError('BAD_ARGS', 'Incorrect positional arguments.', {hint: usage});
     if (values['base-url'] !== undefined) process.env.SHAREONE_BASE_URL = values['base-url'];
     return {values, positional: positionals[0] || null};
 }
