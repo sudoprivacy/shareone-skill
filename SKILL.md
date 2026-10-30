@@ -24,6 +24,8 @@ Host HTML/Markdown pages and share PDF, Word, and PowerPoint documents with Shar
 
 ## 内容版本管理决策
 
+发布的 HTML/Markdown/TXT 内容仅允许跳转到精确匹配的 `shareone.vip`、`s.shareone.vip`、`shareone.app` 链接。外链确认后继续访问的入口已禁用，内容脚本也不能自行打开外部新窗口或让 iframe 跳往外部网站。生成页面时，同文档锚点可用于页内导航；需要外部资料时保留可复制的来源信息，不通过改写目标、嵌套 iframe 或跳转脚本绕过限制。本地开发只额外允许当前配置的本机 origin。
+
 ShareOne 复用 **GitHub / GitLab 的内容版本管理**：历史、diff、分支、评审和回退在源仓库完成，ShareOne 负责展示、分享、访问控制和评论协作。`remote_url` 的 snapshot 是当前缓存，ShareOne 不维护独立的文件版本库。
 
 评论目标重新绑定是独立的协作记录，不是文件版本管理。原始 `quote` / `highlighter_data` 保留；有 `anchor_binding` 时，其目标才是当前有效绑定。查看或处理评论先读对应评论工作流；用户明确要求重绑时再读 [workflows/comment-reattachment.md](workflows/comment-reattachment.md)。不要猜测未记录的历史选区，也不要自动迁移旧评论。
