@@ -13,7 +13,12 @@
 | 本地文件上传 | 按原发布流程保存当前内容；不会自动建立 Git 历史或绑定仓库 |
 | ShareOne 内链 pointer | 多个分享同步同一份源内容，可各设密码/水印；不保存源的历史版本 |
 
-这些 remote-url 步骤适用于文本页面；PDF/PPT/Word 继续使用 `publish-binary-file.md`。只查看历史时读取源仓库即可；需要创建、绑定、切换或刷新分享时，先完成 `environment-and-credentials.md` 的凭据检查。更新 remote URL 和强制刷新要求分享 owner 权限；仓库读写权限由 Git 平台单独管理。
+These Git remote-url steps apply to text pages. Word supports direct same-owner
+ShareOne base/recipient pointers through `word_share.js`; see
+[the binary workflow](publish-binary-file.md#word-base-and-recipient-shares).
+PDF/PPT still use ordinary binary uploads. Complete credential setup before
+creating, binding or refreshing shares. Source updates and forced refreshes
+require the share owner; Git permissions remain separate.
 
 完整原生 HTML 的远程源上限为 16 MiB。遇到审核拒绝或 `CONTENT_REVIEW_REQUIRED`，保留拒绝记录，按用户授权走 [content-review.md](content-review.md)；不另选版本或改成其他上传方式绕过拒绝。正式批准仅适用于审核记录中的文件哈希、源 URL、页面和访问设置。
 

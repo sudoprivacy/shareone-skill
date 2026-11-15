@@ -5,7 +5,7 @@ license: MIT
 metadata:
   slug: shareone
   display-name: ShareOne
-  version: 1.12.0
+  version: 1.13.0
   summary: Host HTML pages and share PDF/Word/PPT docs with short links
   tags:
     - shareone
@@ -17,6 +17,10 @@ metadata:
 ---
 
 # AI Agent 技能：发布到 ShareOne (shareone)
+
+Word base/recipient pointers and in-place Word replacement use
+`scripts/word_share.js`; read [the binary workflow](workflows/publish-binary-file.md#word-base-and-recipient-shares).
+Keep an existing recipient URL when binding it; its watermark and access settings remain independent.
 
 Host HTML/Markdown pages and share PDF, Word, and PowerPoint documents with ShareOne public short links. Covers page publishing, document sharing, password protection, watermarks, review comments, downloads, and updates to existing shares.
 

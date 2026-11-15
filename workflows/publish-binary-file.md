@@ -46,7 +46,53 @@ node scripts/publish.js "<FILE_PATH>" [--password "OPTIONAL_PASSWORD"] [--waterm
 
 对于已经上传的二进制文件，如果用户只要求修改密码、水印、自定义短链接或评论开关，本文件不适用：改读 `update-share-settings.md`，使用 `update_share_settings.js` 只更新元数据，不要手动拼 PUT 请求。
 
-如果用户要求“替换成另一个 pptx”等更换文件内容的操作，不要把文件内容 PUT 到 `/s/<share_id>` 或 `/api/v1/files/<share_id>`；应使用上面的 `publish.js "<FILE_PATH>"` 重新走文件上传流程（会生成新链接）。
+PDF/PPT content replacement still uses `publish.js` and creates a new link. Word
+content replacement and base/recipient binding use the workflow below.
+
+## Word base and recipient shares
+
+Use `word_share.js` for `.doc` / `.docx` documents up to 16 MiB. Do not convert
+Word to HTML to establish a reference. The API field is `remote_url`; a reference
+to another ShareOne share is a **pointer share**.
+
+1. Publish the generic Word base with `publish.js` without recipient-specific
+   watermarks. Use the actual returned Word URL.
+2. If a recipient share already exists, retain that URL. Otherwise publish the
+   same Word file once with the requested recipient watermark.
+3. Bind that recipient to the base:
+
+```bash
+node scripts/word_share.js "<RECIPIENT_WORD_URL>" --remote-url "<BASE_WORD_URL>"
+```
+
+Binding changes the content source, not the recipient's URL, watermark,
+password, comments or download settings. The source must be a direct upload
+owned by the same account, with link access and no password/email/review gate.
+External binary sources, chains, self-references and implicit detaching are
+rejected. The server stores the base's stable ID so changing its slug is safe.
+Deleting the base withdraws its recipients too; tightening its access blocks
+their public content delivery, including cached downloads. An active recipient
+keeps an otherwise idle Word base from automatic expiry.
+
+To update the base while preserving both URLs:
+
+```bash
+node scripts/word_share.js "<BASE_WORD_URL>" --file "<UPDATED_DOCX_PATH>"
+node scripts/refresh_share.js "<RECIPIENT_WORD_URL>"
+```
+
+Replacement keeps the original filename and Word format. Update the base, not
+the recipient's cached bytes. Repeat refresh for each recipient requiring an
+immediate update; ordinary viewer visits refresh lazily with the existing
+60-second throttle. Raw downloads serve the last accepted snapshot. Verify the
+returned digest, original URL and recipient settings. Comments stay attached to
+the original share but are not automatically reanchored. There is no separate
+Word version-history or rollback API. A lost response requires reading back the
+share before deciding whether to repeat a write.
+
+`--dry-run` previews either operation without credentials or network access.
+Online watermarks remain viewer overlays; they are not embedded in downloaded
+Word files.
 
 ## 5. 下一步
 
